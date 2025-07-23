@@ -1,3 +1,5 @@
+import streamlit as st
+import matplotlib.pyplot as plt
 # 📊 수익률 및 확률 분석
 st.header("📊 확률 분석 및 기대 수익 시뮬레이션")
 
