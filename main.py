@@ -25,12 +25,17 @@ if "spinning" not in st.session_state:
 if "selected" not in st.session_state:
     st.session_state.selected = ""
 
+roulette_display = st.empty()
+
 def spin_roulette():
     st.session_state.spinning = True
     st.session_state.selected = ""
-    with st.spinner("룰렛을 돌리는 중..."):
-        time.sleep(2)
-        st.session_state.selected = random.choice(food_options)
+    spin_cycles = 30  # 룰렛이 돌아가는 횟수
+    for i in range(spin_cycles):
+        choice = random.choice(food_options)
+        roulette_display.markdown(f"### 🍽️ {choice}")
+        time.sleep(0.05 + (i / spin_cycles) * 0.1)  # 점점 느려지는 효과
+    st.session_state.selected = choice
     st.session_state.spinning = False
 
 st.button("룰렛 돌리기", on_click=spin_roulette, disabled=st.session_state.spinning)
