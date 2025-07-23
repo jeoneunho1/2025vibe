@@ -69,7 +69,7 @@ if st.session_state.balance <= 0 or st.session_state.banned:
 st.title("🛑 도발 예방 프로그램")
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-bet_type = st.radio("베팅할 대상", ["플레이어", "방커", "타이"])
+bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
 # 금액 조절 버튼
 col1, col2, col3, col4 = st.columns(4)
