@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import urllib.parse
 
 st.set_page_config(page_title="2028 내신 분석기", layout="wide")
 
@@ -16,7 +15,20 @@ grade_score = {
     "5등급": 5.0
 }
 
-# 목표 대학 기준 평균 등급
+# 대학군 → 대표 대학명 + 어디가 unvCd
+univ_links = {
+    "의대/치대/한의대/SKY": [("서울대", "0000001"), ("연세대", "0000011"), ("고려대", "0000015")],
+    "서성한": [("서강대", "0000030"), ("성균관대", "0000025"), ("한양대", "0000035")],
+    "중경외시/건동홍/시립대": [("중앙대", "0000045"), ("경희대", "0000049"), ("건국대", "0000053"),
+                            ("동국대", "0000059"), ("홍익대", "0000060"), ("서울시립대", "0000115")],
+    "숙명여대/세종대/가천대": [("숙명여대", "0000075"), ("세종대", "0000083"), ("가천대", "0000063")],
+    "단국대/아주대/국민대 등": [("단국대", "0000089"), ("아주대", "0000090"), ("국민대", "0000078")],
+    "지방 국립대": [("부산대", "0000120"), ("경북대", "0000121"), ("충남대", "0000122"),
+                ("전남대", "0000123"), ("전북대", "0000124")],
+    "전문대": []
+}
+
+# 목표 대학군 평균 등급 기준
 target_level = {
     "의대/치대/한의대/SKY": 1.1,
     "서성한": 1.2,
@@ -27,18 +39,7 @@ target_level = {
     "전문대": 3.5
 }
 
-# 각 대학군 → 대표 대학 리스트
-univ_links = {
-    "의대/치대/한의대/SKY": ["서울대", "연세대", "고려대"],
-    "서성한": ["서강대", "성균관대", "한양대"],
-    "중경외시/건동홍/시립대": ["중앙대", "경희대", "한국외대", "건국대", "동국대", "홍익대", "서울시립대"],
-    "숙명여대/세종대/가천대": ["숙명여대", "세종대", "가천대"],
-    "단국대/아주대/국민대 등": ["단국대", "아주대", "숭실대", "국민대", "광운대"],
-    "지방 국립대": ["부산대", "경북대", "충남대", "전남대", "전북대"],
-    "전문대": []
-}
-
-# 예측 함수
+# 평균 등급 → 대학군 분류
 def predict_university(avg):
     if avg <= 1.10:
         return "의대/치대/한의대/SKY"
@@ -124,12 +125,11 @@ else:
 
     st.subheader("🔗 관련 대학 학과별 내신 성적 보기")
     if result_group in univ_links:
-        for univ in univ_links[result_group]:
-            encoded = urllib.parse.quote(univ)
-            url = f"https://www.adiga.kr/3_univ/3_1_1_search.aspx?BCODE=1000&SCODE=1000&keyField=univNm&keyWord={encoded}"
-            st.markdown(f"- [{univ} 내신 성적 보기]({url})", unsafe_allow_html=True)
+        for name, code in univ_links[result_group]:
+            url = f"https://www.adiga.kr/ucp/uvt/uni/univDetailSelection.do?menuId=PCUVTINF2000&searchSyr=2026&unvCd={code}"
+            st.markdown(f"- [{name} 내신 성적 보기]({url})", unsafe_allow_html=True)
 
-    # 약한 과목 분석
+    # 약한 과목
     st.subheader("💡 보완 전략: 개선하면 효과 큰 과목")
     weak_subjects = sorted(subject_grades.items(), key=lambda x: -x[1])[:2]
     for subj, score in weak_subjects:
