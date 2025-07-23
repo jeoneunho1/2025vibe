@@ -19,13 +19,13 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# Streamlit 설정
-st.set_page_config(page_title="Baccarat 게임", layout="centered")
+# 기본 설정
+st.set_page_config(page_title="도박 예방 프로그램", layout="centered")
 
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
 
-# 세션 상태 초기화
+# 세션 초기화
 if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "bet_amount" not in st.session_state:
@@ -37,7 +37,7 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 
-# ❌ 다시 시작 클릭 시 전체 경고 화면
+# ❌ 재시작 시 경고 화면
 if st.session_state.try_restart:
     st.markdown(
         """
@@ -51,34 +51,35 @@ if st.session_state.try_restart:
     )
     st.stop()
 
+# 타이틀 및 설명
+st.title("🛑 도박 예방 프로그램")
+st.caption("이 시뮬레이션은 도박의 위험성을 체감하고, 그 결과가 얼마나 불확실한지를 보여주기 위한 교육용 도구입니다.")
+
 # 💀 파산 처리
 if st.session_state.balance <= 0 or st.session_state.banned:
-    st.error("💀 잔액이 0원이 되었습니다.")
+    st.error("💥 잔액이 0원이 되었습니다.")
     st.markdown("""
-### ⚠️ **이게 도박의 끝입니다**
-도박은 하지 않는 것이 가장 좋은 선택입니다.
-
----
+## ⚠️ 이게 바로 도박의 끝입니다.
+도박은 시작하는 순간부터 이미 손해일 수 있습니다.  
+더 이상 손실이 커지기 전에 지금 멈추세요.
 
 #### 🆘 도움이 필요하신가요?
-- 📞 **도박 문제 상담전화:** 1336 (24시간 운영)
-- 🌐 [한국도박문제관리센터(KCGP) 바로가기](https://www.kcgp.or.kr/portal/main/main.do)
+- 📞 도박 문제 상담전화: 1336 (24시간 운영)
+- 🌐 [한국도박문제관리센터 바로가기](https://www.kcgp.or.kr/portal/main/main.do)
 """)
 
-    if st.button("🔄 다시 시작하기"):
+    if st.button("🔁 다시 시작하기"):
         st.session_state.try_restart = True
 
     st.session_state.banned = True
     st.stop()
 
-# ✅ 정상 화면 출력
-st.title(" ")
-
+# 잔액 표시
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-st.markdown("#### 💵 베팅 금액 조절")
+st.markdown("#### 🎚️ 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("➖ -10,000원"):
@@ -94,7 +95,7 @@ with col4:
         st.session_state.bet_amount = 0
 
 st.session_state.bet_amount = st.slider(
-    "🎚️ 베팅 금액 선택",
+    "🎚️ 슬라이더로 베팅 금액 설정",
     min_value=0,
     max_value=st.session_state.balance,
     step=BET_STEP,
@@ -102,9 +103,9 @@ st.session_state.bet_amount = st.slider(
     key="bet_slider"
 )
 
-st.markdown(f"**현재 베팅 금액: {st.session_state.bet_amount:,}원**")
+st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
-# 🎲 게임 시작
+# 게임 실행
 if st.button("🎲 게임 시작"):
     bet_amount = st.session_state.bet_amount
 
@@ -117,7 +118,7 @@ if st.button("🎲 게임 시작"):
     st.markdown("### 🎯 게임 결과")
     st.write(f"🧑 플레이어: `{player_hand}` → {player_score}점")
     st.write(f"💼 뱅커: `{banker_hand}` → {banker_score}점")
-    st.write(f"🏆 결과: **{winner} 승!**")
+    st.write(f"🏆 결과: **{winner} 승리**")
 
     if bet_type == winner:
         if winner == "플레이어":
@@ -127,10 +128,10 @@ if st.button("🎲 게임 시작"):
         else:
             payout = bet_amount * 8
         st.session_state.balance += payout
-        st.success(f"✅ 베팅 성공! +{payout:,}원 수익")
+        st.success(f"🎉 승리! +{payout:,}원 수익")
     else:
         st.session_state.balance -= bet_amount
-        st.error(f"❌ 베팅 실패! -{bet_amount:,}원 손실")
+        st.error(f"😞 패배! -{bet_amount:,}원 손실")
 
     st.markdown(f"### 💰 남은 잔액: **{st.session_state.balance:,}원**")
 
@@ -147,11 +148,20 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 기록
+# 기록 보기
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
-        st.markdown("#### 🔁 최근 게임")
+        st.markdown("#### 📌 최근 10게임 기록")
         for i, r in enumerate(reversed(st.session_state.history[-10:]), 1):
             st.write(f"🎮 {i} - 승자: {r['승자']}, 베팅: {r['베팅']} ({r['금액']:,}원) → 잔액: {r['잔액']:,}원")
     else:
         st.info("아직 게임 기록이 없습니다.")
+
+# 교육용 푸터 메시지
+st.markdown("---")
+st.markdown("""
+#### 🎓 교육 메시지
+> 도박은 한순간의 쾌락을 위해 장기적인 삶을 희생할 수 있습니다.  
+> 이 시뮬레이션을 통해 "계속 잃고 있다는 감각"을 기억하세요.  
+> **절대 시작하지 않는 것이 가장 좋은 선택입니다.**
+""")
