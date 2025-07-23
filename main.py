@@ -1,11 +1,10 @@
 import streamlit as st
 
 # 앱 제목
-st.title("🎓 2028 내신 성취도 분석기 (고교학점제 기반 + 세분화 대학 예측)")
-st.caption("절대평가 5등급제 & 단위수 기반으로 내신을 계산하고, 자세한 대학 예측과 과목 추천을 해드립니다.")
+st.title("🎓 2028 내신 성취도 분석기 (최신 대학 예측 반영)")
+st.caption("절대평가 5등급제 + 고정 단위수 + 세분화된 대학군 예측")
 
-# 등급 점수 매핑 (5등급제)
-# 1등급: 1점, 5등급: 5점
+# 등급 점수 매핑
 grade_score = {
     "1등급": 1.0,
     "2등급": 2.0,
@@ -31,58 +30,53 @@ total_units = 0
 subject_grades = {}
 
 for subj in subjects:
-    grade = st.selectbox(
-        f"{subj['name']} 등급 선택", 
-        list(grade_score.keys()), 
-        key=subj["name"]
-    )
+    grade = st.selectbox(f"{subj['name']} 등급", list(grade_score.keys()), key=subj["name"])
     score = grade_score[grade]
-    weighted = score * subj["unit"]
-    total_score += weighted
+    total_score += score * subj["unit"]
     total_units += subj["unit"]
     subject_grades[subj["name"]] = score
 
-# 내신 가중 평균 계산
+# 평균 계산
 if total_units > 0:
     avg_grade = round(total_score / total_units, 2)
-    st.subheader("📊 내신 분석 결과")
-    st.write(f"📌 **가중 평균 성취도 등급**: {avg_grade} 등급")
+    st.subheader("📊 내신 평균 등급")
+    st.write(f"📌 **가중 평균 등급**: {avg_grade} 등급")
 else:
-    st.warning("과목을 모두 입력해주세요.")
+    st.warning("모든 과목의 등급을 입력해주세요.")
     avg_grade = None
 
-# 🎓 세분화된 대학 예측 함수
-def predict_university(grade):
-    if grade <= 1.2:
+# 🎓 대학 예측 기준
+def predict_university(avg):
+    if avg <= 1.1:
         return "🏆 서울대 / 연세대 / 고려대"
-    elif grade <= 1.5:
+    elif avg <= 1.3:
         return "🥇 서강대 / 성균관대 / 한양대 / 이화여대"
-    elif grade <= 1.8:
-        return "🎯 중대 / 경희대 / 한국외대 / 서울시립대"
-    elif grade <= 2.2:
-        return "✅ 건국대 / 동국대 / 숙명여대 / 홍익대"
-    elif grade <= 2.5:
+    elif avg <= 1.5:
+        return "🎯 중앙대 / 경희대 / 한국외대 / 서울시립대"
+    elif avg <= 1.7:
+        return "✅ 건국대 / 동국대 / 홍익대"
+    elif avg <= 1.9:
         return "💡 가천대 / 숭실대 / 세종대 / 명지대"
-    elif grade <= 2.8:
+    elif avg <= 2.2:
         return "📘 경기대 / 상명대 / 한성대 / 삼육대"
-    elif grade <= 3.2:
-        return "🔍 인하대 / 전북대 / 경북대 등 지방 국립대"
-    elif grade <= 3.8:
-        return "🏫 지방 사립대 / 적성전형 대학"
+    elif avg <= 2.7:
+        return "🔍 지방 거점 국립대 (인하대, 전북대, 경북대 등)"
+    elif avg <= 3.2:
+        return "🏫 지방 사립대 / 적성고사 대학"
     else:
-        return "📉 전문대 / 실기·특기자 중심 전형 추천"
+        return "📉 전문대 / 실기·특기자 전형 중심 접근 필요"
 
-# 출력 대학 예측
+# 출력
 if avg_grade:
-    st.markdown(f"🎓 **예상 가능 대학군:** {predict_university(avg_grade)}")
+    st.subheader("🎓 예상 가능 대학군")
+    st.markdown(f"👉 {predict_university(avg_grade)}")
 
-# 💡 과목별 보완 추천
-st.subheader("💡 과목별 보완 전략 추천")
-weak_subjects = sorted(subject_grades.items(), key=lambda x: -x[1])[:3]  # 성적 낮은 3과목
-for subj, score in weak_subjects:
+# 보완 전략
+st.subheader("💡 과목별 보완 전략")
+for subj, score in sorted(subject_grades.items(), key=lambda x: -x[1])[:3]:
     if score >= 3.5:
-        st.info(f"📌 **{subj}** 성취도 보완 필요: {score}등급 → 주요 과목이 평균을 끌어내리고 있어요.")
+        st.info(f"📌 **{subj}** 성취도 보완이 필요합니다 (현재 {score}등급). 등급 향상이 전체 평균에 큰 영향을 줄 수 있어요!")
 
 # 안내
 st.markdown("---")
-st.caption("※ 2028 대입: 절대평가 5등급제 + 단위수 가중 평균 기준입니다.")
+st.caption("※ 2028 대입 | 절대평가 5등급제 + 고정 단위수 기반 가중평균 분석 기준입니다.")
