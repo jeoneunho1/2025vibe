@@ -38,20 +38,25 @@ def play_baccarat():
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
 st.title("🎴 Baccarat 미니 게임")
 
+# 초기 설정
+STARTING_BALANCE = 100000
+MIN_BET = 1000
+BET_STEP = 1000
+
 # 세션 초기화
 if "balance" not in st.session_state:
-    st.session_state.balance = 1000
+    st.session_state.balance = STARTING_BALANCE
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # 💰 현재 잔액 표시
-st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance}원**")
+st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
 # 💀 파산 시 처리
-if st.session_state.balance < 100:
-    st.error("💀 잔액이 100원 미만입니다. 베팅을 할 수 없습니다.")
-    if st.button("🔄 잔액 초기화 (100000원으로 재시작)"):
-        st.session_state.balance = 100000
+if st.session_state.balance < MIN_BET:
+    st.error(f"💀 잔액이 {MIN_BET:,}원 미만입니다. 베팅을 할 수 없습니다.")
+    if st.button("🔄 잔액 초기화 (100,000원으로 재시작)"):
+        st.session_state.balance = STARTING_BALANCE
         st.session_state.history = []
         st.success("🎉 잔액이 초기화되었습니다.")
     st.stop()
@@ -61,10 +66,10 @@ bet_type = st.radio("베팅할 대상 선택", ["플레이어", "뱅커", "타�
 
 bet_amount = st.number_input(
     "💵 베팅 금액",
-    min_value=100,
+    min_value=MIN_BET,
     max_value=st.session_state.balance,
-    step=100,
-    value=min(100, st.session_state.balance)
+    step=BET_STEP,
+    value=min(MIN_BET, st.session_state.balance)
 )
 
 # 🎲 게임 시작
@@ -86,13 +91,13 @@ if st.button("🎲 게임 시작"):
         else:
             winnings = bet_amount
         st.session_state.balance += winnings
-        st.success(f"✅ 베팅 성공! +{winnings}원")
+        st.success(f"✅ 베팅 성공! +{winnings:,}원")
     else:
         st.session_state.balance -= bet_amount
-        st.error(f"❌ 베팅 실패! -{bet_amount}원")
+        st.error(f"❌ 베팅 실패! -{bet_amount:,}원")
 
     # 💰 현재 잔액 출력
-    st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance}원**")
+    st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
     # 기록 저장
     st.session_state.history.append({
@@ -110,7 +115,7 @@ if st.checkbox("📋 게임 기록 보기"):
         st.markdown("#### 최근 게임 기록")
         for i, r in enumerate(reversed(st.session_state.history[-10:]), 1):
             st.write(
-                f"🎮 {i} - 승자: {r['승자']}, 베팅: {r['베팅']} ({r['금액']}원) → 잔액: {r['잔액']}원"
+                f"🎮 {i} - 승자: {r['승자']}, 베팅: {r['베팅']} ({r['금액']:,}원) → 잔액: {r['잔액']:,}원"
             )
     else:
         st.info("아직 게임 기록이 없습니다.")
