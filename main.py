@@ -1,102 +1,50 @@
 import streamlit as st
-import datetime
-import json
-import os
-
-# --- 파일 경로 ---
-DATA_FILE = "tracker_data.json"
-
-# --- 초기 데이터 불러오기 ---
-if "data" not in st.session_state:
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            st.session_state.data = json.load(f)
-    else:
-        st.session_state.data = {}
-
-# --- 오늘 날짜 데이터 생성 ---
-today = datetime.date.today().isoformat()
-if today not in st.session_state.data:
-    st.session_state.data[today] = {
-        "mood": None,
-        "todos": [],
-        "times": {},
-        "note": ""
-    }
-
-day_data = st.session_state.data[today]
 
 # --- 앱 제목 ---
-st.title("🧠 MyLife Tracker")
-st.subheader(f"📅 {today} | 오늘 하루 어땠나요?")
+st.title("🎓 내신 성적 분석기")
+st.write("과목별 등급을 입력하면 내신 평균과 예상 대학 수준을 분석해드립니다!")
 
-# --- 감정 선택 ---
-moods = {"😊": "좋음", "😐": "보통", "😢": "슬픔", "😠": "화남", "😍": "사랑"}
-selected_mood = st.radio(
-    "기분 선택", list(moods.keys()),
-    index=list(moods.keys()).index(day_data["mood"]) if day_data["mood"] else 1,
-    horizontal=True
-)
-day_data["mood"] = selected_mood
+# --- 과목 리스트 ---
+subjects = ["국어", "수학", "영어", "사회", "과학", "한국사", "기술가정", "도덕", "음악", "미술", "체육"]
 
-# --- 할 일 관리 ---
-st.markdown("## ✅ 오늘의 할 일")
-todo_input = st.text_input("할 일 추가")
-if st.button("➕ 추가") and todo_input:
-    day_data["todos"].append({"task": todo_input, "done": False})
+st.subheader("📝 과목별 등급 입력")
+grades = {}
+for subject in subjects:
+    grades[subject] = st.selectbox(f"{subject} 등급", [1, 2, 3, 4, 5, 6, 7, 8, 9], key=subject)
 
-for i, t in enumerate(day_data["todos"]):
-    col1, col2 = st.columns([0.1, 0.9])
-    checked = col1.checkbox("", value=t["done"], key=f"todo_{i}")
-    col2.write(f"~~{t['task']}~~" if checked else t["task"])
-    day_data["todos"][i]["done"] = checked
+# --- 평균 내신 계산 ---
+total_avg = round(sum(grades.values()) / len(grades), 2)
 
-# --- 시간 기록 ---
-st.markdown("## ⏱️ 오늘 시간 사용 기록")
-activities = ["업무", "공부", "운동", "휴식", "기타"]
-for act in activities:
-    time = st.number_input(
-        f"{act}에 사용한 시간 (시간)", min_value=0.0, max_value=24.0, step=0.5,
-        value=day_data["times"].get(act, 0.0)
-    )
-    day_data["times"][act] = time
+# 주요과목 기준 (국영수사과)
+main_subjects = ["국어", "수학", "영어", "사회", "과학"]
+main_avg = round(sum(grades[s] for s in main_subjects) / len(main_subjects), 2)
 
-# --- 메모 작성 ---
-st.markdown("## 📝 오늘을 돌아보며")
-day_data["note"] = st.text_area("한 줄 회고", value=day_data["note"])
+# --- 결과 분석 ---
+def estimate_university(avg):
+    if avg <= 1.5:
+        return "✅ **상위권 대학** (서성한/중경외시/서울과기대 등) 가능성이 높아요."
+    elif avg <= 2.5:
+        return "🎯 **인서울 대학** (건국/홍익/숭실/세종 등) 충분히 가능합니다."
+    elif avg <= 3.5:
+        return "🙂 **수도권 대학** (가천/경기/단국/광운 등) 지원권입니다."
+    elif avg <= 4.5:
+        return "🔍 **지방국립/지방 사립대** 중심 지원을 고려해보세요."
+    else:
+        return "📘 **전문대/특성화대/적성고사 대학** 중심으로 전략을 짜야 해요."
 
-# --- 감정 & 시간 요약 시각화 ---
-st.markdown("## 📊 감정 & 시간 요약")
+# --- 출력 결과 ---
+st.subheader("📊 내신 결과 분석")
+st.write(f"📌 **전체 평균 등급**: {total_avg}")
+st.write(f"📌 **주요 과목 평균 (국영수사과)**: {main_avg}")
 
-# 감정 추이 (최근 7일)
-mood_history = [
-    st.session_state.data[d]["mood"]
-    for d in sorted(st.session_state.data.keys())[-7:]
-    if st.session_state.data[d]["mood"]
-]
-if mood_history:
-    st.write("지난 7일 감정 추이:")
-    mood_score = [list(moods.keys()).index(m) for m in mood_history]
-    st.line_chart(mood_score)
+st.markdown(estimate_university(main_avg))
 
-# 시간 막대 차트
-if any(day_data["times"].values()):
-    st.write("오늘 시간 사용량")
-    st.bar_chart(day_data["times"])
+# --- 추가 피드백 ---
+if total_avg <= 2.0 and grades["영어"] >= 4:
+    st.info("💡 영어 등급을 조금 더 끌어올리면 상위권 대학 가능성이 훨씬 높아져요!")
+elif grades["수학"] >= 5:
+    st.info("📐 수학 성적 향상이 전체 내신 상승에 크게 도움이 될 수 있어요!")
 
-# --- 데이터 저장 ---
-with open(DATA_FILE, "w") as f:
-    json.dump(st.session_state.data, f)
-
-# --- 일요일이면 주간 요약 보여주기 ---
-if datetime.date.today().weekday() == 6:
-    st.markdown("## 📈 이번 주 요약")
-    week_days = [datetime.date.today() - datetime.timedelta(days=i) for i in range(6, -1, -1)]
-    for day in week_days:
-        d_str = day.isoformat()
-        if d_str in st.session_state.data:
-            entry = st.session_state.data[d_str]
-            mood = entry["mood"] or "❓"
-            done_count = sum(1 for t in entry["todos"] if t["done"])
-            total = len(entry["todos"])
-            st.write(f"{d_str} | 기분: {mood} | 할 일 완료: {done_count}/{total}")
+# --- 리셋 안내 ---
+st.markdown("---")
+st.caption("Tip: 등급을 바꾸면 실시간으로 분석 결과가 자동 갱신돼요.")
