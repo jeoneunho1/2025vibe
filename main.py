@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-# 점수 계산
+# 카드 점수 계산
 def card_value(card):
     return 0 if card in ["10", "J", "Q", "K"] else (1 if card == "A" else int(card))
 
@@ -19,13 +19,13 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# 설정
+# Streamlit 설정
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
 
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
 
-# 세션 상태
+# 세션 상태 초기화
 if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "bet_amount" not in st.session_state:
@@ -37,7 +37,7 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 
-# ❌ 다시 시작하기 누른 후 단호한 경고 화면
+# ❌ 다시 시작 클릭 시 전체 경고 화면
 if st.session_state.try_restart:
     st.markdown(
         """
@@ -51,7 +51,7 @@ if st.session_state.try_restart:
     )
     st.stop()
 
-# 💀 파산 즉시 처리
+# 💀 파산 처리
 if st.session_state.balance <= 0 or st.session_state.banned:
     st.error("💀 잔액이 0원이 되었습니다.")
     st.markdown("""
@@ -61,8 +61,8 @@ if st.session_state.balance <= 0 or st.session_state.banned:
 ---
 
 #### 🆘 도움이 필요하신가요?
-- 📞 **중독관리통합지원센터:** 1336 (24시간 상담)
-- 🌐 [https://www.konpas.or.kr](https://www.konpas.or.kr)
+- 📞 **도박 문제 상담전화:** 1336 (24시간 운영)
+- 🌐 [한국도박문제관리센터(KCGP) 바로가기](https://www.kcgp.or.kr/portal/main/main.do)
 """)
 
     if st.button("🔄 다시 시작하기"):
@@ -71,16 +71,13 @@ if st.session_state.balance <= 0 or st.session_state.banned:
     st.session_state.banned = True
     st.stop()
 
-# ✅ 정상 게임 UI는 여기부터
+# ✅ 정상 화면 출력
 st.title(" ")
 
-# 💰 잔액
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-# 🎯 베팅 대상
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-# 💵 베팅 금액 조절
 st.markdown("#### 💵 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -96,7 +93,6 @@ with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
 
-# 🎚️ 슬라이더
 st.session_state.bet_amount = st.slider(
     "🎚️ 베팅 금액 선택",
     min_value=0,
@@ -151,7 +147,7 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 📋 게임 기록 보기
+# 기록
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 🔁 최근 게임")
