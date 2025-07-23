@@ -4,10 +4,15 @@ import datetime
 
 # --- 초기 메뉴 데이터 ---
 default_menus = {
-    "한식": ["김치찌개", "비빔밥", "불고기", "제육볶음", "냉면", "된장찌개", "콩나물국밥", "갈비탕"],
-    "중식": ["짜장면", "짬뽕", "탕수육", "마파두부", "꿔바로우"],
-    "양식": ["파스타", "스테이크", "피자", "햄버거", "샐러드"],
-    "일식": ["초밥", "라멘", "가츠동", "우동", "규동"]
+    "한식": [
+        {"name": "김치찌개", "kcal": 230, "carbs": 12, "protein": 15, "fat": 10},
+        {"name": "비빔밥", "kcal": 550, "carbs": 80, "protein": 18, "fat": 12},
+        {"name": "불고기", "kcal": 420, "carbs": 20, "protein": 25, "fat": 22}
+    ],
+    "양식": [
+        {"name": "스테이크", "kcal": 600, "carbs": 10, "protein": 40, "fat": 35},
+        {"name": "샐러드", "kcal": 200, "carbs": 10, "protein": 5, "fat": 12}
+    ]
 }
 
 # --- 요일별 테마 키워드 ---
@@ -21,7 +26,7 @@ theme_keywords = {
     "일요일": []
 }
 
-# --- 세션 상태 초기화 ---
+# --- 세션 초기화 ---
 if "menus" not in st.session_state:
     st.session_state.menus = default_menus.copy()
 
@@ -42,59 +47,74 @@ weekday_kor = {
 today_kor = weekday_kor[today]
 theme = theme_keywords[today_kor]
 
-# --- 앱 제목 ---
-st.title("🍽️ 점심 메뉴 추천기")
-st.write(f"🗓️ 오늘은 **{today_kor}**이에요. 추천 테마에 맞춰 골라드릴게요!")
+# --- UI: 앱 제목 ---
+st.title("🍱 건강한 점심 메뉴 추천기")
+st.write(f"📅 오늘은 **{today_kor}**, 건강까지 생각한 점심을 추천해드릴게요!")
 
 # --- 카테고리 선택 ---
 category = st.selectbox("카테고리를 선택하세요", list(st.session_state.menus.keys()))
 
-# --- 추천 기능 ---
+# --- 추천 버튼 ---
 st.subheader(f"👉 {category} 메뉴 추천")
+
+def format_menu_info(menu):
+    return f"{menu['name']} ({menu['kcal']} kcal, 탄:{menu['carbs']}g, 단:{menu['protein']}g, 지:{menu['fat']}g)"
 
 if st.button("✨ 오늘 메뉴 추천 받기"):
     menus = st.session_state.menus[category]
     
-    # 요일 테마 우선 필터
-    themed_menus = [m for m in menus if any(k in m for k in theme)]
-    
-    if themed_menus:
-        selected = random.choice(themed_menus)
-        st.success(f"오늘은 {today_kor} 테마! 추천 메뉴는 **{selected}** 입니다 🎉")
+    themed = [m for m in menus if any(k in m['name'] for k in theme)]
+
+    if themed:
+        selected = random.choice(themed)
+        st.success(f"오늘의 추천 메뉴는 👉 **{format_menu_info(selected)}** 🎉")
     elif menus:
         selected = random.choice(menus)
-        st.success(f"테마에 맞는 메뉴는 없지만, 랜덤 추천! 👉 **{selected}**")
+        st.success(f"테마 메뉴는 없지만 랜덤 추천! 👉 **{format_menu_info(selected)}**")
     else:
         st.warning("이 카테고리에 메뉴가 없습니다. 메뉴를 추가해보세요.")
         selected = None
 
     if selected:
-        st.session_state.history.insert(0, f"[{today_kor} / {category}] {selected}")
+        st.session_state.history.insert(0, f"[{today_kor} / {category}] {format_menu_info(selected)}")
 
 # --- 메뉴 추가 ---
 st.subheader("➕ 메뉴 추가")
-new_menu = st.text_input("추가할 메뉴 이름")
-if st.button("메뉴 추가"):
-    if new_menu:
-        if new_menu in st.session_state.menus[category]:
+with st.form("add_menu"):
+    name = st.text_input("메뉴 이름", key="name")
+    kcal = st.number_input("칼로리 (kcal)", min_value=0, value=0)
+    carbs = st.number_input("탄수화물 (g)", min_value=0, value=0)
+    protein = st.number_input("단백질 (g)", min_value=0, value=0)
+    fat = st.number_input("지방 (g)", min_value=0, value=0)
+    submitted = st.form_submit_button("메뉴 추가")
+
+if submitted:
+    if name:
+        if any(m['name'] == name for m in st.session_state.menus[category]):
             st.warning("이미 존재하는 메뉴입니다.")
         else:
-            st.session_state.menus[category].append(new_menu)
-            st.success(f"{new_menu} 메뉴가 추가되었습니다.")
+            st.session_state.menus[category].append({
+                "name": name, "kcal": kcal, "carbs": carbs, "protein": protein, "fat": fat
+            })
+            st.success(f"{name} 메뉴가 추가되었습니다!")
     else:
-        st.error("메뉴 이름을 입력해주세요.")
+        st.error("메뉴 이름은 필수입니다.")
 
 # --- 메뉴 삭제 ---
 st.subheader("🗑️ 메뉴 삭제")
 if st.session_state.menus[category]:
-    menu_to_delete = st.selectbox("삭제할 메뉴 선택", st.session_state.menus[category])
-    if st.button("메뉴 삭제"):
-        st.session_state.menus[category].remove(menu_to_delete)
-        st.success(f"{menu_to_delete} 메뉴가 삭제되었습니다.")
+    to_delete = st.selectbox(
+        "삭제할 메뉴 선택",
+        st.session_state.menus[category],
+        format_func=lambda m: m["name"]
+    )
+    if st.button("삭제"):
+        st.session_state.menus[category].remove(to_delete)
+        st.success(f"{to_delete['name']} 메뉴가 삭제되었습니다.")
 else:
     st.info("삭제할 메뉴가 없습니다.")
 
-# --- 추천 기록 보기 ---
+# --- 추천 기록 ---
 st.subheader("📜 최근 추천 기록")
 if st.session_state.history:
     st.write("\n".join(st.session_state.history[:10]))
