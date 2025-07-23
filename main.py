@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import pandas as pd
 
-# 카드 점수 계산
+# 카드 점수 계산 함수
 def card_value(card):
     return 0 if card in ["10", "J", "Q", "K"] else (1 if card == "A" else int(card))
 
@@ -20,6 +20,7 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return winner
 
+# 확률 분석
 def simulate_baccarat(n_rounds=10000):
     outcomes = {"플레이어": 0, "뱅커": 0, "타이": 0}
     for _ in range(n_rounds):
@@ -48,8 +49,10 @@ if "banned" not in st.session_state:
     st.session_state.banned = False
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-# 강제 종료 화면
+# 도박 금지 경고 화면
 if st.session_state.try_restart:
     st.markdown(
         """
@@ -76,14 +79,12 @@ if st.session_state.balance <= 0 or st.session_state.banned:
 - 📞 **도박 문제 상담전화:** 1336 (24시간 운영)
 - 🌐 [한국도박문제관리센터(KCGP) 바로가기](https://www.kcgp.or.kr/portal/main/main.do)
 """)
-
     if st.button("🔄 다시 시작하기"):
         st.session_state.try_restart = True
-
     st.session_state.banned = True
     st.stop()
 
-# 본 게임 화면
+# UI
 st.title("🎰 바카라 게임")
 
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
@@ -124,6 +125,7 @@ st.slider(
 
 st.markdown(f"**현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
+# 게임 시작
 if st.button("🎲 게임 시작"):
     winner = play_baccarat()
     bet_amount = st.session_state.bet_amount
@@ -142,23 +144,32 @@ if st.button("🎲 게임 시작"):
         st.error(f"❌ 베팅 실패! -{bet_amount:,}원")
 
     st.markdown(f"### 💰 잔액: **{st.session_state.balance:,}원**")
-    if st.session_state.balance <= 0:
-        st.session_state.banned = True
-        st.rerun()
 
-# 📊 수익률/확률 분석
-st.header("📊 확률 분석 및 기대 수익 시뮬레이션")
+    # 결과 기록
+    st.session_state.history.append(winner)
+    if len(st.session_state.history) > 30:
+        st.session_state.history.pop(0)
 
-with st.spinner("📈 10,000회 시뮬레이션 중..."):
+    st.rerun()
+
+# 히스토리 OX 형태 표시
+st.markdown("### 🧾 최근 결과 기록 (최대 30판)")
+symbol_map = {"플레이어": "🧑", "뱅커": "💼", "타이": "🤝"}
+result_row = " | ".join([symbol_map[r] for r in st.session_state.history])
+st.markdown(f"`{result_row}`")
+
+# 시뮬레이션
+st.header("📊 확률 분석 및 기대 수익")
+
+with st.spinner("10,000회 시뮬레이션 중..."):
     outcomes = simulate_baccarat()
     profits = expected_profit(outcomes)
 
     df = pd.DataFrame({
-        "승률(%)": [round(outcomes[k]/100, 2) for k in outcomes],
+        "승률(%)": [round(outcomes[k] / 100, 2) for k in outcomes],
         "기대수익(원/1만원)": [int(profits[k]) for k in profits]
     }, index=["플레이어", "뱅커", "타이"])
 
     st.dataframe(df)
-
     st.bar_chart(df["승률(%)"])
     st.bar_chart(df["기대수익(원/1만원)"])
