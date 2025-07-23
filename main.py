@@ -50,8 +50,8 @@ st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance}원**")
 # 💀 파산 시 처리
 if st.session_state.balance < 100:
     st.error("💀 잔액이 100원 미만입니다. 베팅을 할 수 없습니다.")
-    if st.button("🔄 잔액 초기화 (1000원으로 재시작)"):
-        st.session_state.balance = 1000
+    if st.button("🔄 잔액 초기화 (100000원으로 재시작)"):
+        st.session_state.balance = 100000
         st.session_state.history = []
         st.success("🎉 잔액이 초기화되었습니다.")
     st.stop()
