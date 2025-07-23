@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-# 카드 점수 계산
+# 점수 계산
 def card_value(card):
     return 0 if card in ["10", "J", "Q", "K"] else (1 if card == "A" else int(card))
 
@@ -19,15 +19,13 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# Streamlit 설정
+# 설정
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
-st.title("🎴 실전 룰 기반 Baccarat 게임")
 
-# 설정값
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
 
-# 세션 초기화
+# 세션 상태
 if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "bet_amount" not in st.session_state:
@@ -39,7 +37,7 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 
-# ❌ '다시 시작하기' 누른 후 단호한 경고 화면
+# ❌ 다시 시작하기 누른 후 단호한 경고 화면
 if st.session_state.try_restart:
     st.markdown(
         """
@@ -53,7 +51,7 @@ if st.session_state.try_restart:
     )
     st.stop()
 
-# 💀 파산 처리
+# 💀 파산 즉시 처리
 if st.session_state.balance <= 0 or st.session_state.banned:
     st.error("💀 잔액이 0원이 되었습니다.")
     st.markdown("""
@@ -73,13 +71,16 @@ if st.session_state.balance <= 0 or st.session_state.banned:
     st.session_state.banned = True
     st.stop()
 
-# 💰 현재 잔액 표시
+# ✅ 정상 게임 UI는 여기부터
+st.title(" ")
+
+# 💰 잔액
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
 # 🎯 베팅 대상
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-# 💵 베팅 금액 조절 버튼
+# 💵 베팅 금액 조절
 st.markdown("#### 💵 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -104,6 +105,7 @@ st.session_state.bet_amount = st.slider(
     value=st.session_state.bet_amount,
     key="bet_slider"
 )
+
 st.markdown(f"**현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
 # 🎲 게임 시작
@@ -149,7 +151,7 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 📋 게임 기록
+# 📋 게임 기록 보기
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 🔁 최근 게임")
