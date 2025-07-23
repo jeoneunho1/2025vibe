@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-# 🃏 카드 점수 계산
+# 카드 점수 계산
 def card_value(card):
     if card in ["10", "J", "Q", "K"]:
         return 0
@@ -10,15 +10,15 @@ def card_value(card):
     else:
         return int(card)
 
-# 🤖 점수 계산
+# 손 패 점수 계산
 def hand_score(hand):
     return sum(card_value(c) for c in hand) % 10
 
-# 🪄 카드 한 장 뽑기
+# 카드 한 장 뽑기
 def draw_card():
     return random.choice(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"])
 
-# 🎲 게임 실행
+# 게임 실행
 def play_baccarat():
     player_hand = [draw_card(), draw_card()]
     banker_hand = [draw_card(), draw_card()]
@@ -34,11 +34,11 @@ def play_baccarat():
 
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# 🌐 Streamlit 설정
+# Streamlit 설정
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
 st.title("🎴 실전 룰 기반 Baccarat 게임")
 
-# 💵 설정값
+# 설정값
 STARTING_BALANCE = 100000
 MIN_BET = 1000
 BET_STEP = 1000
@@ -54,20 +54,21 @@ if "bet_amount" not in st.session_state:
 # 💰 잔액 표시
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-# 🛑 파산 처리
+# 💀 파산 처리
 if st.session_state.balance < MIN_BET:
-    st.error(f"💀 잔액이 {MIN_BET:,}원 미만입니다. 더 이상 베팅할 수 없습니다.")
-    if st.button("🔄 잔액 초기화"):
+    st.error("💀 잔액이 1,000원 미만입니다.")
+    st.markdown("### ⚠️ 이게 **도박의 끝**입니다.\n도박은 하지 않는 것이 가장 좋은 선택입니다.")
+    if st.button("🔄 다시 시작 (100,000원으로 초기화)"):
         st.session_state.balance = STARTING_BALANCE
         st.session_state.history = []
         st.session_state.bet_amount = MIN_BET
         st.success("🎉 게임이 초기화되었습니다.")
     st.stop()
 
-# 🎯 베팅 UI
+# 베팅 대상 선택
 bet_type = st.radio("어디에 베팅하시겠습니까?", ["플레이어", "뱅커", "타이"])
 
-# 💸 베팅 금액 버튼 컨트롤
+# 베팅 금액 조절
 st.markdown("#### 💵 베팅 금액 조절")
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -82,7 +83,7 @@ with col3:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = MIN_BET
 
-# 💵 베팅 금액 슬라이더
+# 슬라이더로 금액 선택
 st.session_state.bet_amount = st.slider(
     "🎚️ 베팅 금액 선택",
     min_value=MIN_BET,
@@ -94,7 +95,7 @@ st.session_state.bet_amount = st.slider(
 
 st.markdown(f"**현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
-# ▶️ 게임 시작
+# 게임 시작
 if st.button("🎲 게임 시작"):
     bet_amount = st.session_state.bet_amount
     player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
@@ -104,14 +105,14 @@ if st.button("🎲 게임 시작"):
     st.write(f"💼 뱅커: `{banker_hand}` → {banker_score}점")
     st.write(f"🏆 결과: **{winner} 승!**")
 
-    # 💵 승패 및 수익 처리
+    # 베팅 처리
     if bet_type == winner:
         if winner == "플레이어":
-            payout = bet_amount  # 1:1
+            payout = bet_amount
         elif winner == "뱅커":
-            payout = int(bet_amount * 0.95)  # 0.95:1
+            payout = int(bet_amount * 0.95)
         elif winner == "타이":
-            payout = bet_amount * 8  # 8:1
+            payout = bet_amount * 8
         total_gain = bet_amount + payout
         st.session_state.balance += payout
         st.success(f"✅ 베팅 성공! +{payout:,}원 수익 (총 수령: {total_gain:,}원)")
@@ -119,10 +120,10 @@ if st.button("🎲 게임 시작"):
         st.session_state.balance -= bet_amount
         st.error(f"❌ 베팅 실패! -{bet_amount:,}원 손실")
 
-    # 💰 잔액 표시
+    # 잔액 표시
     st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-    # 📝 기록 저장
+    # 기록 저장
     st.session_state.history.append({
         "플레이어": player_hand,
         "뱅커": banker_hand,
@@ -132,7 +133,7 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 📋 기록 보기
+# 📋 게임 기록 보기
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 🔁 최근 게임")
