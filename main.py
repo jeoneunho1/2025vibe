@@ -25,7 +25,6 @@ def play_baccarat():
     player_score = hand_score(player_hand)
     banker_score = hand_score(banker_hand)
 
-    # 단순 승부판정 (써드 카드 룰 없음)
     if player_score > banker_score:
         winner = "플레이어"
     elif player_score < banker_score:
@@ -39,32 +38,33 @@ def play_baccarat():
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
 st.title("🎴 Baccarat 미니 게임")
 
-# 세션 상태 초기화
+# 세션 초기화
 if "balance" not in st.session_state:
     st.session_state.balance = 1000
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# 💀 파산 처리
-if st.session_state.balance < 100:
-    st.error("💀 잔액이 100원 미만입니다. 더 이상 베팅할 수 없습니다.")
-    if st.button("🔄 게임 초기화"):
-        st.session_state.balance = 100000
-        st.session_state.history = []
-        st.success("🎉 게임이 초기화되었습니다!")
-    st.stop()
-
 # 💰 현재 잔액 표시
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance}원**")
 
+# 💀 파산 시 처리
+if st.session_state.balance < 100:
+    st.error("💀 잔액이 100원 미만입니다. 베팅을 할 수 없습니다.")
+    if st.button("🔄 잔액 초기화 (1000원으로 재시작)"):
+        st.session_state.balance = 1000
+        st.session_state.history = []
+        st.success("🎉 잔액이 초기화되었습니다.")
+    st.stop()
+
 # 🎯 베팅 UI
 bet_type = st.radio("베팅할 대상 선택", ["플레이어", "뱅커", "타이"])
+
 bet_amount = st.number_input(
     "💵 베팅 금액",
-    min_value=1000,
+    min_value=100,
     max_value=st.session_state.balance,
     step=100,
-    value=100
+    value=min(100, st.session_state.balance)
 )
 
 # 🎲 게임 시작
@@ -77,7 +77,7 @@ if st.button("🎲 게임 시작"):
     st.write(f"💼 뱅커: `{banker_hand}` → {banker_score}점")
     st.write(f"🏆 승리: **{winner}**")
 
-    # 승패 처리
+    # 베팅 처리
     if bet_type == winner:
         if winner == "타이":
             winnings = bet_amount * 8
@@ -91,7 +91,7 @@ if st.button("🎲 게임 시작"):
         st.session_state.balance -= bet_amount
         st.error(f"❌ 베팅 실패! -{bet_amount}원")
 
-    # 💰 잔액 출력
+    # 💰 현재 잔액 출력
     st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance}원**")
 
     # 기록 저장
@@ -104,7 +104,7 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 📋 게임 기록
+# 📋 게임 기록 보기
 if st.checkbox("📋 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 최근 게임 기록")
