@@ -5,15 +5,12 @@ import random
 def card_value(card):
     return 0 if card in ["10", "J", "Q", "K"] else (1 if card == "A" else int(card))
 
-# 패 점수 계산
 def hand_score(hand):
     return sum(card_value(c) for c in hand) % 10
 
-# 카드 한 장 뽑기
 def draw_card():
     return random.choice(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"])
 
-# 게임 실행
 def play_baccarat():
     player_hand = [draw_card(), draw_card()]
     banker_hand = [draw_card(), draw_card()]
@@ -22,25 +19,39 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# Streamlit 기본 설정
+# Streamlit 설정
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
 st.title("🎴 실전 룰 기반 Baccarat 게임")
 
-# 게임 설정
+# 설정값
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
 
-# 세션 상태 초기화
+# 세션 초기화
 if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
-if "history" not in st.session_state:
-    st.session_state.history = []
 if "bet_amount" not in st.session_state:
     st.session_state.bet_amount = 0
+if "history" not in st.session_state:
+    st.session_state.history = []
 if "banned" not in st.session_state:
     st.session_state.banned = False
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
+
+# ❌ '다시 시작하기' 누른 후 단호한 경고 화면
+if st.session_state.try_restart:
+    st.markdown(
+        """
+        <div style='text-align: center; padding-top: 100px;'>
+            <h1 style='font-size: 48px; color: red;'>❌ 인생에는 '다시'가 없습니다</h1>
+            <h2>후회할 선택 하지 마세요.</h2>
+            <p style='font-size: 20px;'>도박은 잃을 때 끝나는 게 아니라, <strong>시작할 때부터 지고 있는 겁니다.</strong></p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.stop()
 
 # 💀 파산 처리
 if st.session_state.balance <= 0 or st.session_state.banned:
@@ -59,22 +70,16 @@ if st.session_state.balance <= 0 or st.session_state.banned:
     if st.button("🔄 다시 시작하기"):
         st.session_state.try_restart = True
 
-    if st.session_state.try_restart:
-        st.warning("""
-### ❌ 인생에는 '다시'가 없습니다
-> 후회할 선택 하지 마세요.  
-> 도박은 잃을 때 끝나는 게 아니라, **시작할 때부터 지고 있는 겁니다.**
-""")
     st.session_state.banned = True
     st.stop()
 
-# 💰 잔액 표시
+# 💰 현재 잔액 표시
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-# 🎯 베팅 대상 선택
+# 🎯 베팅 대상
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-# 💵 베팅 금액 조절
+# 💵 베팅 금액 조절 버튼
 st.markdown("#### 💵 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -99,7 +104,6 @@ st.session_state.bet_amount = st.slider(
     value=st.session_state.bet_amount,
     key="bet_slider"
 )
-
 st.markdown(f"**현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
 # 🎲 게임 시작
@@ -107,7 +111,7 @@ if st.button("🎲 게임 시작"):
     bet_amount = st.session_state.bet_amount
 
     if bet_amount == 0:
-        st.warning("⚠️ 베팅 금액이 0원입니다. 게임을 진행할 수 없습니다.")
+        st.warning("⚠️ 베팅 금액이 0원입니다.")
         st.stop()
 
     player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
@@ -122,7 +126,7 @@ if st.button("🎲 게임 시작"):
             payout = bet_amount
         elif winner == "뱅커":
             payout = int(bet_amount * 0.95)
-        else:  # 타이
+        else:
             payout = bet_amount * 8
         st.session_state.balance += payout
         st.success(f"✅ 베팅 성공! +{payout:,}원 수익")
@@ -132,12 +136,10 @@ if st.button("🎲 게임 시작"):
 
     st.markdown(f"### 💰 남은 잔액: **{st.session_state.balance:,}원**")
 
-    # 0원이 되면 즉시 경고 화면
     if st.session_state.balance <= 0:
         st.session_state.banned = True
         st.rerun()
 
-    # 기록 저장
     st.session_state.history.append({
         "플레이어": player_hand,
         "뱅커": banker_hand,
@@ -147,7 +149,7 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 📋 기록 보기
+# 📋 게임 기록
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 🔁 최근 게임")
