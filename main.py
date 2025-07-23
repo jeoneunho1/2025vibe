@@ -1,211 +1,184 @@
-
 import streamlit as st
-import pandas as pd
+import random
 
-st.set_page_config(page_title="2028 내신 분석기", layout="wide")
+# 카드 점수 계산 함수
+def card_value(card):
+    return 0 if card in ["10", "J", "Q", "K"] else (1 if card == "A" else int(card))
 
-st.title("🎓 2028 내신 성취도 분석기 (절대평가 5등급제 기반)")
-st.caption("주요 과목 + 단위수 반영 평균 등급 → 대학 예측 & 시뮬레이션 + 전략 조언 + 대학별 내신 링크")
+def hand_score(hand):
+    return sum(card_value(c) for c in hand) % 10
 
-# 등급 점수 매핑
-grade_score = {
-    "1등급": 1.0,
-    "2등급": 2.0,
-    "3등급": 3.0,
-    "4등급": 4.0,
-    "5등급": 5.0
-}
+def draw_card():
+    return random.choice(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"])
 
-# 대학군 → 대표 대학명 + 어디가 unvCd
-univ_links = {
-    "의대/치대/한의대/SKY": [("서울대", "0000001"), ("연세대", "0000011"), ("고려대", "0000015")],
-    "서성한": [("서강대", "0000030"), ("성균관대", "0000025"), ("한양대", "0000035")],
-    "중경외시/건동홍/시립대": [("중앙대", "0000045"), ("경희대", "0000049"), ("건국대", "0000053"),
-                            ("동국대", "0000059"), ("홍익대", "0000060"), ("서울시립대", "0000115")],
-    "숙명여대/세종대/가천대": [("숙명여대", "0000075"), ("세종대", "0000083"), ("가천대", "0000063")],
-    "단국대/아주대/국민대 등": [("단국대", "0000089"), ("아주대", "0000090"), ("국민대", "0000078")],
-    "지방 국립대": [("부산대", "0000120"), ("경북대", "0000121"), ("충남대", "0000122"),
-                ("전남대", "0000123"), ("전북대", "0000124")],
-    "전문대": []
-}
+def play_baccarat():
+    player_hand = [draw_card(), draw_card()]
+    banker_hand = [draw_card(), draw_card()]
+    player_score = hand_score(player_hand)
+    banker_score = hand_score(banker_hand)
+    winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
+    return player_hand, banker_hand, player_score, banker_score, winner
 
-# 목표 대학군 평균 등급 기준
-target_level = {
-    "의대/치대/한의대/SKY": 1.1,
-    "서성한": 1.2,
-    "중경외시/건동홍/시립대": 1.3,
-    "숙명여대/세종대/가천대": 1.4,
-    "단국대/아주대/국민대 등": 1.55,
-    "지방 국립대": 2.5,
-    "전문대": 3.5
-}
+# 앱 설정
+st.set_page_config(page_title="도박 예방 프로그램", layout="centered")
 
-# 평균 등급 → 대학군 분류
-def predict_university(avg):
-    if avg <= 1.10:
-        return "의대/치대/한의대/SKY"
-    elif avg <= 1.20:
-        return "서성한"
-    elif avg <= 1.30:
-        return "중경외시/건동홍/시립대"
-    elif avg <= 1.40:
-        return "숙명여대/세종대/가천대"
-    elif avg <= 1.55:
-        return "단국대/아주대/국민대 등"
-    elif avg <= 2.50:
-        return "지방 국립대"
-    else:
-        return "전문대"
+# 초기 값
+STARTING_BALANCE = 1_000_000
+BET_STEP = 10_000
 
-# 초기 과목 리스트
-if "subjects" not in st.session_state:
-    st.session_state.subjects = [
-        {"name": "국어", "unit": 4, "grade": "2등급"},
-        {"name": "영어", "unit": 4, "grade": "2등급"},
-        {"name": "수학", "unit": 4, "grade": "2등급"},
-        {"name": "사회", "unit": 3, "grade": "2등급"},
-        {"name": "과학", "unit": 3, "grade": "2등급"},
-        {"name": "한국사", "unit": 3, "grade": "2등급"},
-    ]
+# 세션 상태 초기화
+if "balance" not in st.session_state:
+    st.session_state.balance = STARTING_BALANCE
+if "bet_amount" not in st.session_state:
+    st.session_state.bet_amount = 0
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "banned" not in st.session_state:
+    st.session_state.banned = False
+if "try_restart" not in st.session_state:
+    st.session_state.try_restart = False
 
-# 과목 추가
-st.subheader("📚 과목 추가 및 설정")
-with st.form("add_subject_form"):
-    new_name = st.text_input("과목명", "")
-    new_unit = st.number_input("단위수", min_value=1, max_value=10, value=3)
-    new_grade = st.selectbox("등급", list(grade_score.keys()))
-    submitted = st.form_submit_button("➕ 과목 추가")
-    if submitted and new_name:
-        st.session_state.subjects.append({
-            "name": new_name,
-            "unit": new_unit,
-            "grade": new_grade
-        })
-        st.success(f"'{new_name}' 과목이 추가되었습니다.")
+# ❌ 다시 시작 클릭 시 경고 화면
+if st.session_state.try_restart:
+    st.markdown("""
+        <div style='text-align: center; padding-top: 100px;'>
+            <h1 style='font-size: 48px; color: red;'>❌ 인생에는 '다시'가 없습니다</h1>
+            <h2>후회할 선택 하지 마세요.</h2>
+            <p style='font-size: 20px;'>도박은 잃을 때 끝나는 게 아니라, <strong>시작할 때부터 지고 있는 겁니다.</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+    st.stop()
 
-# 과목 리스트 표시 및 삭제
-st.markdown("### 현재 입력된 과목들")
-remove_indices = []
-total_score = 0
-total_units = 0
-subject_grades = {}
+# 타이틀
+st.title("🛑 도박 예방 프로그램")
+st.caption("이 시뮬레이션은 도박의 위험성을 체감하고, 그 결과가 얼마나 불확실한지를 보여주기 위한 교육용 도구입니다.")
 
-for i, subj in enumerate(st.session_state.subjects):
-    col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
-    with col1:
-        subj["name"] = st.text_input(f"과목명 {i+1}", value=subj["name"], key=f"name_{i}")
-    with col2:
-        subj["unit"] = st.number_input(f"단위수 {i+1}", min_value=1, max_value=10, value=subj["unit"], key=f"unit_{i}")
-    with col3:
-        subj["grade"] = st.selectbox(f"등급 {i+1}", options=list(grade_score.keys()), index=list(grade_score.keys()).index(subj["grade"]), key=f"grade_{i}")
-    with col4:
-        if st.button("🗑️ 삭제", key=f"remove_{i}"):
-            remove_indices.append(i)
+# 💀 파산 시 경고 출력
+if st.session_state.balance <= 0 or st.session_state.banned:
+    st.error("💥 잔액이 0원이 되었습니다.")
+    st.markdown("""
+## ⚠️ 이게 바로 도박의 끝입니다.
+도박은 시작하는 순간부터 이미 손해일 수 있습니다.  
+더 이상 손실이 커지기 전에 지금 멈추세요.
 
-for i in sorted(remove_indices, reverse=True):
-    del st.session_state.subjects[i]
+#### 🆘 도움이 필요하신가요?
+- 📞 도박 문제 상담전화: 1336 (24시간 운영)
+- 🌐 [한국도박문제관리센터 바로가기](https://www.kcgp.or.kr/portal/main/main.do)
+""")
+    if st.button("🔁 다시 시작하기"):
+        st.session_state.try_restart = True
+    st.session_state.banned = True
+    st.stop()
 
-# 평균 등급 계산
-for subj in st.session_state.subjects:
-    score = grade_score[subj["grade"]]
-    total_score += score * subj["unit"]
-    total_units += subj["unit"]
-    subject_grades[subj["name"]] = score
+# 잔액 및 베팅
+st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-if total_units == 0:
-    st.warning("과목을 추가하고 단위수를 입력해주세요.")
-else:
-    avg_grade = round(total_score / total_units, 2)
+bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-    st.subheader("📊 내신 평균 등급 결과")
-    st.write(f"📌 **가중 평균 등급**: {avg_grade} 등급")
+st.markdown("#### 🎚️ 베팅 금액 조절")
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    if st.button("➖ -10,000원"):
+        st.session_state.bet_amount = max(st.session_state.bet_amount - BET_STEP, 0)
+with col2:
+    if st.button("➕ +10,000원"):
+        st.session_state.bet_amount = min(st.session_state.bet_amount + BET_STEP, st.session_state.balance)
+with col3:
+    if st.button("💯 전액 베팅"):
+        st.session_state.bet_amount = st.session_state.balance
+with col4:
+    if st.button("🔁 초기화"):
+        st.session_state.bet_amount = 0
 
-    result_group = predict_university(avg_grade)
-    st.subheader("🎓 예상 지원 가능 대학군")
-    st.success(f"👉 {result_group}")
+# 슬라이더
+st.session_state.bet_amount = st.slider(
+    "🎚️ 슬라이더로 베팅 금액 설정",
+    min_value=0,
+    max_value=st.session_state.balance,
+    step=BET_STEP,
+    value=st.session_state.bet_amount,
+    key="bet_slider"
+)
 
-    st.subheader("🔗 관련 대학 학과별 내신 성적 보기")
-    if result_group in univ_links:
-        for name, code in univ_links[result_group]:
-            url = f"https://www.adiga.kr/ucp/uvt/uni/univDetailSelection.do?menuId=PCUVTINF2000&searchSyr=2026&unvCd={code}"
-            st.markdown(f"- [{name} 내신 성적 보기]({url})", unsafe_allow_html=True)
+st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
-    # 약한 과목
-    st.subheader("💡 보완 전략: 개선하면 효과 큰 과목")
-    weak_subjects = sorted(subject_grades.items(), key=lambda x: -x[1])[:2]
-    for subj, score in weak_subjects:
-        if score > 1.0:
-            st.info(f"📌 **{subj}** 현재 {score}등급 → 성적 향상 시 전체 평균 등급 개선 효과 큼!")
+# 게임 실행
+if st.button("🎲 게임 시작"):
+    bet_amount = st.session_state.bet_amount
 
-    # 향상 시뮬레이션
-    st.subheader("📈 시뮬레이션: 성적 향상 시 진학 가능 대학 변화")
+    if bet_amount == 0:
+        st.warning("⚠️ 베팅 금액이 0원입니다.")
+        st.stop()
 
-    def simulate_avg_with_improved_grade(target_subj, new_grade):
-        temp_score = 0
-        for subj in st.session_state.subjects:
-            name = subj["name"]
-            unit = subj["unit"]
-            score = grade_score[new_grade] if name == target_subj else grade_score[subj["grade"]]
-            temp_score += score * unit
-        return round(temp_score / total_units, 2)
+    player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
 
-    for subj_name, current_score in weak_subjects:
-        st.markdown(f"#### 🎯 `{subj_name}` → 등급 향상 시 결과")
-        improved_levels = [g for g, s in grade_score.items() if s < current_score]
-        for improved_grade in improved_levels:
-            new_avg = simulate_avg_with_improved_grade(subj_name, improved_grade)
-            new_group = predict_university(new_avg)
-            st.markdown(f"- `{subj_name}`을 **{improved_grade}**로 올리면 평균 등급 **{new_avg}**, 대학군 👉 **{new_group}**")
+    st.markdown("### 🎯 게임 결과")
+    st.write(f"🧑 플레이어: `{player_hand}` → {player_score}점")
+    st.write(f"💼 뱅커: `{banker_hand}` → {banker_score}점")
+    st.write(f"🏆 결과: **{winner} 승리**")
 
-    # 시나리오별 비교
-    st.subheader("🧪 시나리오별 성적 향상 분석")
-
-    def simulate_scenario(mode="A"):
-        temp_score = 0
-        for subj in st.session_state.subjects:
-            score = grade_score[subj["grade"]]
-            if mode == "A" and subj["name"] == weak_subjects[0][0]:
-                score = max(1.0, score - 1.0)
-            elif mode == "B" and subj["name"] in [s[0] for s in weak_subjects]:
-                score = max(1.0, score - 1.0)
-            elif mode == "C":
-                score = max(1.0, score - 1.0)
-            temp_score += score * subj["unit"]
-        return round(temp_score / total_units, 2)
-
-    scenarios = {
-        "A. 하위 1과목 1등급 향상": simulate_scenario("A"),
-        "B. 하위 2과목 1등급 향상": simulate_scenario("B"),
-        "C. 전 과목 1등급 향상": simulate_scenario("C")
-    }
-
-    for label, avg in scenarios.items():
-        group = predict_university(avg)
-        st.markdown(f"✅ `{label}` → 평균 등급 **{avg}**, 대학군 👉 **{group}**")
-
-    # 목표 대학 비교
-    st.subheader("🎯 목표 대학 입력 → 필요한 평균 등급 분석")
-    goal = st.selectbox("목표 대학군 선택", list(target_level.keys()), index=1)
-    required = target_level[goal]
-    gap = round(avg_grade - required, 2)
-    if gap <= 0:
-        st.success(f"현재 성적으로 `{goal}` 진학 가능성이 높습니다! (목표 등급: {required})")
-    else:
-        st.warning(f"`{goal}` 진학을 위해 평균 등급 **{gap} 등급** 더 개선해야 합니다. (목표: {required})")
-
-    # 전략 조언
-    st.subheader("🧭 현실적인 전략 조언")
-    def give_advice(gap):
-        if gap <= 0:
-            return "🎉 충분히 도전 가능한 성적입니다. 현재 과목을 유지하면서 세부 역량을 보완하세요."
-        elif gap <= 0.3:
-            return f"📈 `{weak_subjects[0][0]}` 과목 위주로 1등급 향상이 가능하다면 도전 가능합니다."
-        elif gap <= 0.6:
-            return f"💪 `{weak_subjects[0][0]}`, `{weak_subjects[1][0]}` 과목을 집중 관리해 1~2등급 개선을 노려보세요."
+    if bet_type == winner:
+        if winner == "플레이어":
+            payout = bet_amount
+        elif winner == "뱅커":
+            payout = int(bet_amount * 0.95)
         else:
-            return "⚠️ 현재 성적으로는 거리감이 있는 목표입니다. 논술/적성/특기자 등 다양한 전형 전략을 병행하세요."
+            payout = bet_amount * 8
+        st.session_state.balance += payout
+        st.success(f"🎉 승리! +{payout:,}원 수익")
+    else:
+        st.session_state.balance -= bet_amount
+        st.error(f"😞 패배! -{bet_amount:,}원 손실")
 
-    st.info(give_advice(gap))
+    st.markdown(f"### 💰 남은 잔액: **{st.session_state.balance:,}원**")
 
+    if st.session_state.balance <= 0:
+        st.session_state.banned = True
+        st.rerun()
+
+    st.session_state.history.append({
+        "플레이어": player_hand,
+        "뱅커": banker_hand,
+        "승자": winner,
+        "베팅": bet_type,
+        "금액": bet_amount,
+        "잔액": st.session_state.balance
+    })
+
+# ✅ 결과 시각화: 컬러 원으로 표시
+st.markdown("### 🧾 최근 결과 시각화")
+
+circle_map = {
+    "플레이어": "<span style='color:#007BFF;'>⬤</span>",
+    "뱅커": "<span style='color:#FF4136;'>⬤</span>",
+    "타이": "<span style='color:#2ECC40;'>⬤</span>"
+}
+
+if st.session_state.history:
+    circle_row = " ".join([circle_map[r['승자']] for r in st.session_state.history[-30:]])
+    st.markdown(f"<div style='font-size: 30px;'>{circle_row}</div>", unsafe_allow_html=True)
+
+with st.expander("🎨 색상 의미"):
+    st.markdown("""
+- 🔵 **플레이어 승**: 파란색 원  
+- 🔴 **뱅커 승**: 빨간색 원  
+- 🟢 **타이**: 초록색 원
+""")
+
+# 📋 기록
+if st.checkbox("📋 최근 게임 기록 보기"):
+    if st.session_state.history:
+        st.markdown("#### 📌 최근 10게임 기록")
+        for i, r in enumerate(reversed(st.session_state.history[-10:]), 1):
+            st.write(f"🎮 {i} - 승자: {r['승자']}, 베팅: {r['베팅']} ({r['금액']:,}원) → 잔액: {r['잔액']:,}원")
+    else:
+        st.info("아직 게임 기록이 없습니다.")
+
+# 교육 메시지
 st.markdown("---")
-st.caption("🔍 본 분석은 2028 대입 절대평가 5등급제 및 단위수 기반 가중 평균을 기준으로 작성되었습니다.")
+st.markdown("""
+#### 🎓 교육 메시지
+> 도박은 한순간의 쾌락을 위해 장기적인 삶을 희생할 수 있습니다.  
+> 이 시뮬레이션을 통해 "계속 잃고 있다는 감각"을 기억하세요.  
+> **절대 시작하지 않는 것이 가장 좋은 선택입니다.**
+""")
