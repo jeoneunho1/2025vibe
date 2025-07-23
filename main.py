@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-# 카드 점수 계산
+# 카드 점수 계산 함수
 def card_value(card):
     return 0 if card in ["10", "J", "Q", "K"] else (1 if card == "A" else int(card))
 
@@ -19,13 +19,14 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# 기본 설정
+# 앱 설정
 st.set_page_config(page_title="도박 예방 프로그램", layout="centered")
 
+# 초기 값
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
 
-# 세션 초기화
+# 세션 상태 초기화
 if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "bet_amount" not in st.session_state:
@@ -37,25 +38,22 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 
-# ❌ 재시작 시 경고 화면
+# ❌ 다시 시작 클릭 시 경고 화면
 if st.session_state.try_restart:
-    st.markdown(
-        """
+    st.markdown("""
         <div style='text-align: center; padding-top: 100px;'>
             <h1 style='font-size: 48px; color: red;'>❌ 인생에는 '다시'가 없습니다</h1>
             <h2>후회할 선택 하지 마세요.</h2>
             <p style='font-size: 20px;'>도박은 잃을 때 끝나는 게 아니라, <strong>시작할 때부터 지고 있는 겁니다.</strong></p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
     st.stop()
 
-# 타이틀 및 설명
+# 타이틀
 st.title("🛑 도박 예방 프로그램")
 st.caption("이 시뮬레이션은 도박의 위험성을 체감하고, 그 결과가 얼마나 불확실한지를 보여주기 위한 교육용 도구입니다.")
 
-# 💀 파산 처리
+# 💀 파산 시 경고 출력
 if st.session_state.balance <= 0 or st.session_state.banned:
     st.error("💥 잔액이 0원이 되었습니다.")
     st.markdown("""
@@ -67,14 +65,12 @@ if st.session_state.balance <= 0 or st.session_state.banned:
 - 📞 도박 문제 상담전화: 1336 (24시간 운영)
 - 🌐 [한국도박문제관리센터 바로가기](https://www.kcgp.or.kr/portal/main/main.do)
 """)
-
     if st.button("🔁 다시 시작하기"):
         st.session_state.try_restart = True
-
     st.session_state.banned = True
     st.stop()
 
-# 잔액 표시
+# 잔액 및 베팅
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
@@ -94,6 +90,7 @@ with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
 
+# 슬라이더
 st.session_state.bet_amount = st.slider(
     "🎚️ 슬라이더로 베팅 금액 설정",
     min_value=0,
@@ -148,7 +145,27 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 기록 보기
+# ✅ 결과 시각화: 컬러 원으로 표시
+st.markdown("### 🧾 최근 결과 시각화")
+
+circle_map = {
+    "플레이어": "<span style='color:#007BFF;'>⬤</span>",
+    "뱅커": "<span style='color:#FF4136;'>⬤</span>",
+    "타이": "<span style='color:#2ECC40;'>⬤</span>"
+}
+
+if st.session_state.history:
+    circle_row = " ".join([circle_map[r['승자']] for r in st.session_state.history[-30:]])
+    st.markdown(f"<div style='font-size: 30px;'>{circle_row}</div>", unsafe_allow_html=True)
+
+with st.expander("🎨 색상 의미"):
+    st.markdown("""
+- 🔵 **플레이어 승**: 파란색 원  
+- 🔴 **뱅커 승**: 빨간색 원  
+- 🟢 **타이**: 초록색 원
+""")
+
+# 📋 기록
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 📌 최근 10게임 기록")
@@ -157,7 +174,7 @@ if st.checkbox("📋 최근 게임 기록 보기"):
     else:
         st.info("아직 게임 기록이 없습니다.")
 
-# 교육용 푸터 메시지
+# 교육 메시지
 st.markdown("---")
 st.markdown("""
 #### 🎓 교육 메시지
