@@ -10,12 +10,15 @@ def card_value(card):
     else:
         return int(card)
 
+# 손 패 점수 계산
 def hand_score(hand):
     return sum(card_value(c) for c in hand) % 10
 
+# 카드 한 장 뽑기
 def draw_card():
     return random.choice(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"])
 
+# 게임 실행
 def play_baccarat():
     player_hand = [draw_card(), draw_card()]
     banker_hand = [draw_card(), draw_card()]
@@ -49,10 +52,21 @@ if "bet_amount" not in st.session_state:
 # 잔액 표시
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-# 파산 처리
+# 💀 파산 처리
 if st.session_state.balance < MIN_BET:
     st.error("💀 잔액이 1,000원 미만입니다.")
-    st.markdown("### ⚠️ 이게 **도박의 끝**입니다.\n도박은 하지 않는 것이 가장 좋은 선택입니다.")
+    st.markdown("""
+### ⚠️ **이게 도박의 끝입니다**
+도박은 하지 않는 것이 가장 좋은 선택입니다.
+
+---
+
+#### 🆘 도움이 필요하신가요?
+- 📞 **중독관리통합지원센터:** 1336 (24시간 상담)
+- 🌐 [https://www.konpas.or.kr](https://www.konpas.or.kr)
+- 💬 무료 도박중독 자가진단, 온라인 상담, 치료 지원 등 제공
+""")
+
     if st.button("🔄 다시 시작 (100,000원으로 초기화)"):
         st.session_state.balance = STARTING_BALANCE
         st.session_state.history = []
