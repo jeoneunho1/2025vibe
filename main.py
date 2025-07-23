@@ -13,7 +13,7 @@ def hand_score(hand):
 def draw_card():
     return random.choice(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"])
 
-# 바카라 게임 로직
+# 게임 실행
 def play_baccarat():
     player_hand = [draw_card(), draw_card()]
     banker_hand = [draw_card(), draw_card()]
@@ -22,15 +22,15 @@ def play_baccarat():
     winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
     return player_hand, banker_hand, player_score, banker_score, winner
 
-# 초기 설정
+# Streamlit 기본 설정
 st.set_page_config(page_title="Baccarat 게임", layout="centered")
 st.title("🎴 실전 룰 기반 Baccarat 게임")
 
+# 게임 설정
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
-MIN_BET = 0
 
-# 세션 초기화
+# 세션 상태 초기화
 if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "history" not in st.session_state:
@@ -39,8 +39,10 @@ if "bet_amount" not in st.session_state:
     st.session_state.bet_amount = 0
 if "banned" not in st.session_state:
     st.session_state.banned = False
+if "try_restart" not in st.session_state:
+    st.session_state.try_restart = False
 
-# ❌ 완전 파산 시
+# 💀 파산 처리
 if st.session_state.balance <= 0 or st.session_state.banned:
     st.error("💀 잔액이 0원이 되었습니다.")
     st.markdown("""
@@ -52,23 +54,27 @@ if st.session_state.balance <= 0 or st.session_state.banned:
 #### 🆘 도움이 필요하신가요?
 - 📞 **중독관리통합지원센터:** 1336 (24시간 상담)
 - 🌐 [https://www.konpas.or.kr](https://www.konpas.or.kr)
+""")
 
----
+    if st.button("🔄 다시 시작하기"):
+        st.session_state.try_restart = True
 
-#### ❌ 다시 시작은 없습니다
-> 인생에는 다시가 없습니다.  
-> 후회할 선택 하지 마세요.
+    if st.session_state.try_restart:
+        st.warning("""
+### ❌ 인생에는 '다시'가 없습니다
+> 후회할 선택 하지 마세요.  
+> 도박은 잃을 때 끝나는 게 아니라, **시작할 때부터 지고 있는 겁니다.**
 """)
     st.session_state.banned = True
     st.stop()
 
-# 💰 현재 잔액 표시
+# 💰 잔액 표시
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
-# 베팅 대상 선택
+# 🎯 베팅 대상 선택
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-# 베팅 금액 조절 버튼
+# 💵 베팅 금액 조절
 st.markdown("#### 💵 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -84,7 +90,7 @@ with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
 
-# 슬라이더로 금액 설정
+# 🎚️ 슬라이더
 st.session_state.bet_amount = st.slider(
     "🎚️ 베팅 금액 선택",
     min_value=0,
@@ -99,6 +105,11 @@ st.markdown(f"**현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 # 🎲 게임 시작
 if st.button("🎲 게임 시작"):
     bet_amount = st.session_state.bet_amount
+
+    if bet_amount == 0:
+        st.warning("⚠️ 베팅 금액이 0원입니다. 게임을 진행할 수 없습니다.")
+        st.stop()
+
     player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
 
     st.markdown("### 🎯 게임 결과")
@@ -113,7 +124,6 @@ if st.button("🎲 게임 시작"):
             payout = int(bet_amount * 0.95)
         else:  # 타이
             payout = bet_amount * 8
-        total_gain = payout
         st.session_state.balance += payout
         st.success(f"✅ 베팅 성공! +{payout:,}원 수익")
     else:
@@ -122,7 +132,7 @@ if st.button("🎲 게임 시작"):
 
     st.markdown(f"### 💰 남은 잔액: **{st.session_state.balance:,}원**")
 
-    # 패배 후 잔액 0원이면 즉시 종료
+    # 0원이 되면 즉시 경고 화면
     if st.session_state.balance <= 0:
         st.session_state.banned = True
         st.rerun()
