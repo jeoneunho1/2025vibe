@@ -1,9 +1,10 @@
 import streamlit as st
+import pandas as pd
 
 st.set_page_config(page_title="2028 내신 분석기", layout="wide")
 
 st.title("🎓 2028 내신 성취도 분석기 (절대평가 5등급제 기반)")
-st.caption("주요 과목 + 단위수 반영 평균 등급 → 세분화된 대학 예측 & 성적 향상 시뮬레이션")
+st.caption("주요 과목 + 단위수 반영 평균 등급 → 대학 예측 & 시뮬레이션 + 전략 조언")
 
 # 등급 점수 매핑
 grade_score = {
@@ -14,7 +15,18 @@ grade_score = {
     "5등급": 5.0
 }
 
-# 대학 예측 기준
+# 목표 대학 기준 평균 등급
+target_level = {
+    "의대/치대/한의대/SKY": 1.1,
+    "서성한": 1.2,
+    "중경외시/건동홍/시립대": 1.3,
+    "숙명여대/세종대/가천대": 1.4,
+    "단국대/아주대/국민대 등": 1.55,
+    "지방 국립대": 2.5,
+    "전문대": 3.5
+}
+
+# 예측 함수
 def predict_university(avg):
     if avg <= 1.10:
         return "🏆 의대, 치대, 한의대, 약대, 수의대, SKY(서울대/연세대/고려대)"
@@ -103,14 +115,15 @@ else:
     st.subheader("🎓 예상 지원 가능 대학군")
     st.success(f"👉 {predict_university(avg_grade)}")
 
+    # 약한 과목
     st.subheader("💡 보완 전략: 개선하면 효과 큰 과목")
     weak_subjects = sorted(subject_grades.items(), key=lambda x: -x[1])[:2]
     for subj, score in weak_subjects:
         if score > 1.0:
             st.info(f"📌 **{subj}** 현재 {score}등급 → 성적 향상 시 전체 평균 등급 개선 효과 큼!")
 
-    # 시뮬레이션: 자동 제안
-    st.subheader("📈 시뮬레이션: 성적 향상 시 진학 가능 대학 변화 (자동 제안)")
+    # 향상 시뮬레이션
+    st.subheader("📈 시뮬레이션: 성적 향상 시 진학 가능 대학 변화")
 
     def simulate_avg_with_improved_grade(target_subj, new_grade):
         temp_score = 0
@@ -125,17 +138,63 @@ else:
         return round(temp_score / total_units, 2)
 
     for subj_name, current_score in weak_subjects:
-        st.markdown(f"#### 🎯 `{subj_name}` (현재 {current_score}등급) → 등급별 시뮬레이션 결과")
+        st.markdown(f"#### 🎯 `{subj_name}` (현재 {current_score}등급) → 등급별 시뮬레이션")
         improved_levels = [g for g, s in grade_score.items() if s < current_score]
         for improved_grade in improved_levels:
             new_avg = simulate_avg_with_improved_grade(subj_name, improved_grade)
             new_univ = predict_university(new_avg)
-
-            st.markdown(f"""
-🔹 `{subj_name}`을 **{improved_grade} 등급**까지 올릴 경우:  
-→ 평균 등급 **{new_avg}**, 진학 가능 대학군 👉 **{new_univ}**
-""")
+            st.markdown(f"🔹 `{subj_name}`을 **{improved_grade}**까지 올리면 평균 등급 **{new_avg}**, 가능 대학 👉 **{new_univ}**")
         st.markdown("---")
 
+    # 시나리오별 비교
+    st.subheader("🧪 시나리오별 시뮬레이션")
+
+    def simulate_scenario(mode="A"):
+        temp_score = 0
+        for subj in st.session_state.subjects:
+            score = grade_score[subj["grade"]]
+            if mode == "A" and subj["name"] == weak_subjects[0][0]:
+                score = max(1.0, score - 1.0)
+            elif mode == "B" and subj["name"] in [s[0] for s in weak_subjects]:
+                score = max(1.0, score - 1.0)
+            elif mode == "C":
+                score = max(1.0, score - 1.0)
+            temp_score += score * subj["unit"]
+        return round(temp_score / total_units, 2)
+
+    scenarios = {
+        "A. 하위 1과목 1등급 향상": simulate_scenario("A"),
+        "B. 하위 2과목 1등급 향상": simulate_scenario("B"),
+        "C. 전 과목 1등급 향상": simulate_scenario("C")
+    }
+
+    for label, avg in scenarios.items():
+        st.markdown(f"✅ `{label}` → 평균 등급 **{avg}**, 대학군: **{predict_university(avg)}**")
+
+    # 목표 대학 → 전략 조언
+    st.subheader("🎯 목표 대학 입력 → 필요한 평균 등급 분석")
+    target_univ = st.selectbox("목표 대학을 선택하세요", list(target_level.keys()), index=1)
+    target_avg = target_level[target_univ]
+    st.write(f"🎓 `{target_univ}` 진학을 위한 목표 평균 등급: **{target_avg} 등급**")
+
+    gap = round(avg_grade - target_avg, 2)
+    if gap <= 0:
+        st.success("✅ 현재 성적으로 해당 대학에 도전 가능합니다!")
+    else:
+        st.warning(f"📉 평균 등급을 **{gap} 등급** 개선해야 합니다.")
+
+    st.subheader("🧭 현실적인 전략 조언")
+    def strategic_advice(gap):
+        if gap <= 0:
+            return "🎉 현재 성적으로 목표 대학 진학 가능성이 높습니다! 유지/보완 전략을 유지하세요."
+        elif gap <= 0.3:
+            return f"💪 도전 가능한 수준입니다. **'{weak_subjects[0][0]}' 과목** 중심으로 성적 향상을 노려보세요."
+        elif gap <= 0.6:
+            return f"📈 어느 정도 개선이 필요합니다. **'{weak_subjects[0][0]}', '{weak_subjects[1][0]}'** 과목에서 1~2등급 올리는 전략이 효과적입니다."
+        else:
+            return f"⚠️ 격차가 큰 편입니다. 전형 다변화 (논술, 적성, 특기자)와 전략적 과목 선택이 필요합니다."
+
+    st.info(strategic_advice(gap))
+
 st.markdown("---")
-st.caption("🔍 본 분석은 2028 대입 절대평가 5등급제 및 단위수 기반 내신 가중 평균을 기준으로 합니다.")
+st.caption("🔍 본 분석은 2028 대입 절대평가 5등급제 및 단위수 기반 가중 평균 등급을 기준으로 한 전략 분석입니다.")
