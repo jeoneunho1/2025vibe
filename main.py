@@ -22,7 +22,6 @@ def play_baccarat():
 # 앱 설정
 st.set_page_config(page_title="도박 예방 프로그램", layout="centered")
 
-# 기본값
 STARTING_BALANCE = 1_000_000
 BET_STEP = 10_000
 
@@ -38,7 +37,7 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 
-# ❌ '다시 시작하기' 클릭 시 경고
+# ❌ 다시 시작 시 경고
 if st.session_state.try_restart:
     st.markdown("""
         <div style='text-align: center; padding-top: 100px;'>
@@ -49,7 +48,7 @@ if st.session_state.try_restart:
         """, unsafe_allow_html=True)
     st.stop()
 
-# 제목
+# 타이틀 및 설명
 st.title("🛑 도박 예방 프로그램")
 st.caption("이 시뮬레이션은 도박의 위험성을 체감하고, 그 결과가 얼마나 불확실한지를 보여주기 위한 교육용 도구입니다.")
 
@@ -69,13 +68,11 @@ if st.session_state.balance <= 0 or st.session_state.banned:
     st.session_state.banned = True
     st.stop()
 
-# 잔액
+# 잔액 및 베팅 대상
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
-
-# 베팅 대상
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-# 금액 조절 버튼
+# 베팅 금액 조절
 st.markdown("#### 🎚️ 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -91,7 +88,7 @@ with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
 
-# 🔢 직접 입력 (10000원 단위)
+# 직접 입력
 st.session_state.bet_amount = st.number_input(
     "💵 베팅 금액 입력 (10,000원 단위)",
     min_value=0,
@@ -103,7 +100,7 @@ st.session_state.bet_amount = st.number_input(
 
 st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
-# 🎲 게임 시작
+# 게임 시작
 if st.button("🎲 게임 시작"):
     bet_amount = st.session_state.bet_amount
     if bet_amount == 0:
@@ -137,33 +134,21 @@ if st.button("🎲 게임 시작"):
         st.rerun()
 
     st.session_state.history.append({
-        "플레이어": player_hand,
-        "뱅커": banker_hand,
         "승자": winner,
         "베팅": bet_type,
         "금액": bet_amount,
         "잔액": st.session_state.balance
     })
 
-# 🎨 최근 결과 시각화
-st.markdown("### 🧾 최근 결과 시각화")
-circle_map = {
-    "플레이어": "<span style='color:#007BFF;'>⬤</span>",
-    "뱅커": "<span style='color:#FF4136;'>⬤</span>",
-    "타이": "<span style='color:#2ECC40;'>⬤</span>"
-}
+# 최근 결과 리스트로 표시
+st.markdown("### 📊 최근 결과")
 if st.session_state.history:
-    row = " ".join([circle_map[r['승자']] for r in st.session_state.history[-30:]])
-    st.markdown(f"<div style='font-size: 30px;'>{row}</div>", unsafe_allow_html=True)
+    result_list = [r["승자"] for r in st.session_state.history[-30:]]
+    st.write(", ".join(result_list))
+else:
+    st.info("최근 결과 없음")
 
-with st.expander("🎨 색상 의미"):
-    st.markdown("""
-- 🔵 **플레이어 승**: 파란색  
-- 🔴 **뱅커 승**: 빨간색  
-- 🟢 **타이**: 초록색
-""")
-
-# 📋 기록
+# 최근 기록
 if st.checkbox("📋 최근 게임 기록 보기"):
     if st.session_state.history:
         st.markdown("#### 📌 최근 10게임 기록")
@@ -172,7 +157,7 @@ if st.checkbox("📋 최근 게임 기록 보기"):
     else:
         st.info("아직 게임 기록이 없습니다.")
 
-# 🎓 교육 메시지
+# 교육 메시지
 st.markdown("---")
 st.markdown("""
 #### 🎓 교육 메시지
