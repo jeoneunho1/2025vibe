@@ -49,7 +49,7 @@ if "history" not in st.session_state:
 if st.session_state.balance < 100:
     st.error("💀 잔액이 100원 미만입니다. 더 이상 베팅할 수 없습니다.")
     if st.button("🔄 게임 초기화"):
-        st.session_state.balance = 1000
+        st.session_state.balance = 100000
         st.session_state.history = []
         st.success("🎉 게임이 초기화되었습니다!")
     st.stop()
@@ -61,7 +61,7 @@ st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance}원**")
 bet_type = st.radio("베팅할 대상 선택", ["플레이어", "뱅커", "타이"])
 bet_amount = st.number_input(
     "💵 베팅 금액",
-    min_value=100,
+    min_value=1000,
     max_value=st.session_state.balance,
     step=100,
     value=100
