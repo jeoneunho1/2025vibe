@@ -38,12 +38,17 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 if "upgrades" not in st.session_state:
-    st.session_state.upgrades = {"타이 확정": 0}  # 구매 횟수 기록
+    st.session_state.upgrades = {
+        "2배 수익": 0,
+        "플레이어 확률 증가": 0,
+        "뱅커 확률 증가": 0,
+        "타이 확률 증가": 0
+    }
 if "effects" not in st.session_state:
     st.session_state.effects = {
-        "타이 확정": False,
         "2배 수익": False,
-        "승률 증가": None
+        "승률 증가": None,
+        "타이 확률 증가": False
     }
 
 # ❌ 다시 시작 클릭 시 경고 화면
@@ -109,12 +114,12 @@ st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**"
 
 # 아이템 효과 시각화
 active_effects = []
-if st.session_state.effects["타이 확정"]:
-    active_effects.append("💥 타이 확정 (다음 판만 적용)")
 if st.session_state.effects["2배 수익"]:
     active_effects.append("💰 2배 수익 (다음 승리 1회 한정)")
 if st.session_state.effects["승률 증가"]:
     active_effects.append(f"🎯 {st.session_state.effects['승률 증가']} 승률 증가 (시뮬레이션)")
+if st.session_state.effects["타이 확률 증가"]:
+    active_effects.append("🟢 타이 확률 증가 (시뮬레이션)")
 
 if active_effects:
     st.markdown("#### 🛠️ 적용 중인 효과:")
@@ -129,15 +134,15 @@ if st.button("🎲 게임 시작"):
         st.warning("⚠️ 베팅 금액이 0원입니다.")
         st.stop()
 
-    if st.session_state.effects["타이 확정"]:
+    player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
+
+    # 시뮬레이션 효과 반영 (간단한 확률 보정)
+    boost = st.session_state.effects["승률 증가"]
+    tie_boost = st.session_state.effects["타이 확률 증가"]
+    if tie_boost and random.random() < 0.1:
         winner = "타이"
-        st.session_state.effects["타이 확정"] = False
-        player_hand = ["?", "?"]
-        banker_hand = ["?", "?"]
-        player_score = 0
-        banker_score = 0
-    else:
-        player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
+    elif boost and random.random() < 0.2:
+        winner = boost
 
     st.markdown("### 🎯 게임 결과")
     st.write(f"🧑 플레이어: `{player_hand}` → {player_score}점")
@@ -193,30 +198,27 @@ if st.session_state.history:
 st.markdown("---")
 st.header("🧨 아이템 상점")
 
-tie_count = st.session_state.upgrades.get("타이 확정", 0)
-tie_price = 1_000_000 * (2 ** tie_count)
-
-item_shop = {
-    "타이 확정": (tie_price, "💥 다음 게임에서 무조건 타이 결과가 나옵니다. (1회용, 매 구매 시 가격 2배 상승)"),
-    "2배 수익": (500_000, "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
-    "플레이어 확률 증가": (400_000, "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
-    "뱅커 확률 증가": (400_000, "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션용)")
+shop = {
+    "2배 수익": (500_000 * (2 ** st.session_state.upgrades["2배 수익"]), "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
+    "플레이어 확률 증가": (400_000 * (2 ** st.session_state.upgrades["플레이어 확률 증가"]), "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
+    "뱅커 확률 증가": (400_000 * (2 ** st.session_state.upgrades["뱅커 확률 증가"]), "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
+    "타이 확률 증가": (600_000 * (2 ** st.session_state.upgrades["타이 확률 증가"]), "🟢 타이 확률이 소폭 증가합니다. (시뮬레이션용)")
 }
 
-for name, (price, desc) in item_shop.items():
-    if st.button(f"💠 {name} 구매 ({price:,}원)"):
+for item, (price, desc) in shop.items():
+    if st.button(f"💠 {item} 구매 ({price:,}원)"):
         if st.session_state.balance >= price:
             st.session_state.balance -= price
-            if name == "타이 확정":
-                st.session_state.effects["타이 확정"] = True
-                st.session_state.upgrades["타이 확정"] += 1
-            elif name == "2배 수익":
+            if item == "2배 수익":
                 st.session_state.effects["2배 수익"] = True
-            elif name == "플레이어 확률 증가":
+            elif item == "플레이어 확률 증가":
                 st.session_state.effects["승률 증가"] = "플레이어"
-            elif name == "뱅커 확률 증가":
+            elif item == "뱅커 확률 증가":
                 st.session_state.effects["승률 증가"] = "뱅커"
-            st.success(f"'{name}' 아이템 구매 완료!")
+            elif item == "타이 확률 증가":
+                st.session_state.effects["타이 확률 증가"] = True
+            st.session_state.upgrades[item] += 1
+            st.success(f"'{item}' 아이템 구매 완료!")
         else:
             st.warning("잔액이 부족합니다.")
         st.caption(desc)
