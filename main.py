@@ -31,16 +31,17 @@ if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "bet_amount" not in st.session_state:
     st.session_state.bet_amount = 0
-if "bet_input" not in st.session_state:
-    st.session_state.bet_input = 0
 if "history" not in st.session_state:
     st.session_state.history = []
 if "banned" not in st.session_state:
     st.session_state.banned = False
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
-if "purchases" not in st.session_state:
-    st.session_state.purchases = []
+if "upgrades" not in st.session_state:
+    st.session_state.upgrades = {
+        "타이 배당 향상": False,
+        "패배 손실 보호막": False
+    }
 
 # ❌ 다시 시작 클릭 시 경고 화면
 if st.session_state.try_restart:
@@ -79,47 +80,34 @@ st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-st.markdown("#### 🎚️ 베팅 금액 조절")
+# 베팅 금액 입력
+bet_input = st.number_input("💵 베팅 금액 입력 (10,000원 단위)",
+                            min_value=0,
+                            max_value=st.session_state.balance,
+                            step=BET_STEP,
+                            format="%d")
+st.session_state.bet_amount = bet_input
+
+# 슬라이더로도 조절 가능
+slider_value = st.slider("🎚️ 베팅 금액 슬라이더", 0, st.session_state.balance, bet_input, BET_STEP)
+if slider_value != bet_input:
+    st.session_state.bet_amount = slider_value
+    bet_input = slider_value
+
+# 버튼들로 조절
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("➖ -10,000원"):
-        new_value = max(st.session_state.bet_amount - BET_STEP, 0)
-        st.session_state.bet_amount = new_value
-        st.session_state.bet_input = new_value
+        st.session_state.bet_amount = max(st.session_state.bet_amount - BET_STEP, 0)
 with col2:
     if st.button("➕ +10,000원"):
-        new_value = min(st.session_state.bet_amount + BET_STEP, st.session_state.balance)
-        st.session_state.bet_amount = new_value
-        st.session_state.bet_input = new_value
+        st.session_state.bet_amount = min(st.session_state.bet_amount + BET_STEP, st.session_state.balance)
 with col3:
     if st.button("💯 전액 베팅"):
         st.session_state.bet_amount = st.session_state.balance
-        st.session_state.bet_input = st.session_state.balance
 with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
-        st.session_state.bet_input = 0
-
-# 베팅 금액 직접 입력
-st.session_state.bet_amount = st.number_input(
-    "💵 베팅 금액 입력 (10,000원 단위)",
-    min_value=0,
-    max_value=st.session_state.balance,
-    step=BET_STEP,
-    value=st.session_state.bet_input,
-    key="bet_input",
-    format="%d"
-)
-
-# 슬라이더도 다시 추가
-st.slider(
-    "🔧 베팅 금액 슬라이더",
-    min_value=0,
-    max_value=st.session_state.balance,
-    step=BET_STEP,
-    value=st.session_state.bet_amount,
-    key="bet_slider"
-)
 
 st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
@@ -138,18 +126,21 @@ if st.button("🎲 게임 시작"):
     st.write(f"💼 뱅커: `{banker_hand}` → {banker_score}점")
     st.write(f"🏆 결과: **{winner} 승리**")
 
+    payout = 0
     if bet_type == winner:
         if winner == "플레이어":
             payout = bet_amount
         elif winner == "뱅커":
             payout = int(bet_amount * 0.95)
         else:
-            payout = bet_amount * 8
+            multiplier = 10 if st.session_state.upgrades["타이 배당 향상"] else 8
+            payout = bet_amount * multiplier
         st.session_state.balance += payout
         st.success(f"🎉 승리! +{payout:,}원 수익")
     else:
-        st.session_state.balance -= bet_amount
-        st.error(f"😞 패배! -{bet_amount:,}원 손실")
+        loss = bet_amount if not st.session_state.upgrades["패배 손실 보호막"] else int(bet_amount * 0.7)
+        st.session_state.balance -= loss
+        st.error(f"😞 패배! -{loss:,}원 손실")
 
     st.markdown(f"### 💰 남은 잔액: **{st.session_state.balance:,}원**")
 
@@ -166,45 +157,25 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 결과 시각화
-if st.session_state.history:
-    st.markdown("### 🧾 최근 결과 기록")
-    results = " → ".join([r['승자'] for r in st.session_state.history[-30:]])
-    st.code(results)
-
-# 📋 기록
-if st.checkbox("📋 최근 게임 기록 보기"):
-    if st.session_state.history:
-        st.markdown("#### 📌 최근 10게임 기록")
-        for i, r in enumerate(reversed(st.session_state.history[-10:]), 1):
-            st.write(f"🎮 {i} - 승자: {r['승자']}, 베팅: {r['베팅']} ({r['금액']:,}원) → 잔액: {r['잔액']:,}원")
-    else:
-        st.info("아직 게임 기록이 없습니다.")
-
-# 🛍 아이템 구매
+# 업그레이드 샵
 st.markdown("---")
-st.header("🎁 수익으로 가치 있는 소비하기")
-items = {
-    "📚 책 1권 (15,000원)": (15000, "지식은 잃지 않습니다."),
-    "🖥 중고 노트북 (300,000원)": (300000, "기회는 준비된 사람에게 옵니다."),
-    "🎧 무선 이어폰 (120,000원)": (120000, "잠깐의 유흥보다 오래 쓰는 가치"),
-    "🎓 학원 수강권 (500,000원)": (500000, "이 돈, 투자였으면 얼마나 좋았을까?"),
+st.header("🔧 업그레이드 샵")
+upgrade_items = {
+    "타이 배당 향상": (500_000, "타이에 베팅 성공 시 배당을 8배 → 10배로 향상합니다."),
+    "패배 손실 보호막": (300_000, "패배 시 손실을 30% 줄입니다."),
 }
-item_choice = st.selectbox("구매할 수 있는 물건을 선택하세요", list(items.keys()))
-
-if st.button("🛍 구매하기"):
-    price, msg = items[item_choice]
-    if st.session_state.balance >= price:
-        st.session_state.balance -= price
-        st.session_state.purchases.append(item_choice)
-        st.success(f"'{item_choice}' 구매 완료! ✨\n👉 {msg}")
+for name, (cost, desc) in upgrade_items.items():
+    if st.session_state.upgrades[name]:
+        st.success(f"✅ {name} (보유 중)")
     else:
-        st.warning("잔액이 부족합니다. 도박으로는 원하는 걸 살 수 없습니다.")
-
-if st.session_state.purchases:
-    st.markdown("#### 🧾 구매한 물건들")
-    for item in st.session_state.purchases:
-        st.write(f"✅ {item}")
+        if st.button(f"🛍 {name} 구매 ({cost:,}원)"):
+            if st.session_state.balance >= cost:
+                st.session_state.balance -= cost
+                st.session_state.upgrades[name] = True
+                st.success(f"'{name}' 업그레이드 완료!")
+            else:
+                st.warning("잔액이 부족합니다.")
+        st.caption(desc)
 
 # 교육 메시지
 st.markdown("---")
