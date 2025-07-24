@@ -39,6 +39,8 @@ if "banned" not in st.session_state:
     st.session_state.banned = False
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
+if "purchases" not in st.session_state:
+    st.session_state.purchases = []
 
 # ❌ 다시 시작 클릭 시 경고 화면
 if st.session_state.try_restart:
@@ -98,7 +100,7 @@ with col4:
         st.session_state.bet_amount = 0
         st.session_state.bet_input = 0
 
-# 숫자 입력으로 베팅 금액 설정
+# 베팅 금액 직접 입력
 st.session_state.bet_amount = st.number_input(
     "💵 베팅 금액 입력 (10,000원 단위)",
     min_value=0,
@@ -109,6 +111,16 @@ st.session_state.bet_amount = st.number_input(
     format="%d"
 )
 
+# 슬라이더도 다시 추가
+st.slider(
+    "🔧 베팅 금액 슬라이더",
+    min_value=0,
+    max_value=st.session_state.balance,
+    step=BET_STEP,
+    value=st.session_state.bet_amount,
+    key="bet_slider"
+)
+
 st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
 
 # 게임 실행
@@ -117,10 +129,6 @@ if st.button("🎲 게임 시작"):
 
     if bet_amount == 0:
         st.warning("⚠️ 베팅 금액이 0원입니다.")
-        st.stop()
-
-    if bet_amount > st.session_state.balance:
-        st.error("❌ 베팅 금액이 잔액을 초과했습니다. 다시 설정해 주세요.")
         st.stop()
 
     player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
@@ -158,25 +166,11 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# ✅ 결과 시각화: 컬러 원으로 표시
-st.markdown("### 🧾 최근 결과 시각화")
-
-circle_map = {
-    "플레이어": "<span style='color:#007BFF;'>⬤</span>",
-    "뱅커": "<span style='color:#FF4136;'>⬤</span>",
-    "타이": "<span style='color:#2ECC40;'>⬤</span>"
-}
-
+# 결과 시각화
 if st.session_state.history:
-    circle_row = " ".join([circle_map[r['승자']] for r in st.session_state.history[-30:]])
-    st.markdown(f"<div style='font-size: 30px;'>{circle_row}</div>", unsafe_allow_html=True)
-
-with st.expander("🎨 색상 의미"):
-    st.markdown("""
-- 🔵 **플레이어 승**: 파란색 원  
-- 🔴 **뱅커 승**: 빨간색 원  
-- 🟢 **타이**: 초록색 원
-""")
+    st.markdown("### 🧾 최근 결과 기록")
+    results = " → ".join([r['승자'] for r in st.session_state.history[-30:]])
+    st.code(results)
 
 # 📋 기록
 if st.checkbox("📋 최근 게임 기록 보기"):
@@ -186,6 +180,31 @@ if st.checkbox("📋 최근 게임 기록 보기"):
             st.write(f"🎮 {i} - 승자: {r['승자']}, 베팅: {r['베팅']} ({r['금액']:,}원) → 잔액: {r['잔액']:,}원")
     else:
         st.info("아직 게임 기록이 없습니다.")
+
+# 🛍 아이템 구매
+st.markdown("---")
+st.header("🎁 수익으로 가치 있는 소비하기")
+items = {
+    "📚 책 1권 (15,000원)": (15000, "지식은 잃지 않습니다."),
+    "🖥 중고 노트북 (300,000원)": (300000, "기회는 준비된 사람에게 옵니다."),
+    "🎧 무선 이어폰 (120,000원)": (120000, "잠깐의 유흥보다 오래 쓰는 가치"),
+    "🎓 학원 수강권 (500,000원)": (500000, "이 돈, 투자였으면 얼마나 좋았을까?"),
+}
+item_choice = st.selectbox("구매할 수 있는 물건을 선택하세요", list(items.keys()))
+
+if st.button("🛍 구매하기"):
+    price, msg = items[item_choice]
+    if st.session_state.balance >= price:
+        st.session_state.balance -= price
+        st.session_state.purchases.append(item_choice)
+        st.success(f"'{item_choice}' 구매 완료! ✨\n👉 {msg}")
+    else:
+        st.warning("잔액이 부족합니다. 도박으로는 원하는 걸 살 수 없습니다.")
+
+if st.session_state.purchases:
+    st.markdown("#### 🧾 구매한 물건들")
+    for item in st.session_state.purchases:
+        st.write(f"✅ {item}")
 
 # 교육 메시지
 st.markdown("---")
