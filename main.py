@@ -84,13 +84,11 @@ st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
 # 슬라이더
-slider_value = st.slider("🎚️ 베팅 금액 설정",
-                         min_value=0,
-                         max_value=st.session_state.balance,
-                         step=BET_STEP,
-                         value=st.session_state.bet_amount,
-                         key="bet_slider")
-st.session_state.bet_amount = slider_value
+st.session_state.bet_amount = st.slider("🎚️ 베팅 금액 설정 (₩10,000 단위)",
+                                        min_value=0,
+                                        max_value=st.session_state.balance,
+                                        step=BET_STEP,
+                                        value=st.session_state.bet_amount)
 
 # 버튼 조작
 col1, col2, col3, col4 = st.columns(4)
@@ -108,6 +106,20 @@ with col4:
         st.session_state.bet_amount = 0
 
 st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
+
+# 아이템 효과 시각화
+active_effects = []
+if st.session_state.effects["타이 확정"]:
+    active_effects.append("💥 타이 확정 (다음 판만 적용)")
+if st.session_state.effects["2배 수익"]:
+    active_effects.append("💰 2배 수익 (다음 승리 1회 한정)")
+if st.session_state.effects["승률 증가"]:
+    active_effects.append(f"🎯 {st.session_state.effects['승률 증가']} 승률 증가 (시뮬레이션)")
+
+if active_effects:
+    st.markdown("#### 🛠️ 적용 중인 효과:")
+    for eff in active_effects:
+        st.markdown(f"- {eff}")
 
 # 게임 실행
 if st.button("🎲 게임 시작"):
@@ -166,6 +178,17 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
+# 결과 시각화
+st.markdown("### 📊 최근 결과 시각화")
+circle_map = {
+    "플레이어": "<span style='color:#007BFF;'>🔵</span>",
+    "뱅커": "<span style='color:#FF4136;'>🔴</span>",
+    "타이": "<span style='color:#2ECC40;'>🟢</span>"
+}
+if st.session_state.history:
+    circle_row = " ".join([circle_map[r['승자']] for r in st.session_state.history[-30:]])
+    st.markdown(f"<div style='font-size: 30px;'>{circle_row}</div>", unsafe_allow_html=True)
+
 # 아이템 상점
 st.markdown("---")
 st.header("🧨 아이템 상점")
@@ -174,10 +197,10 @@ tie_count = st.session_state.upgrades.get("타이 확정", 0)
 tie_price = 1_000_000 * (2 ** tie_count)
 
 item_shop = {
-    "타이 확정": (tie_price, "💥 다음 게임에서 무조건 타이 결과가 나옵니다. (1회용, 가격은 매 구매 시 2배씩 상승)"),
+    "타이 확정": (tie_price, "💥 다음 게임에서 무조건 타이 결과가 나옵니다. (1회용, 매 구매 시 가격 2배 상승)"),
     "2배 수익": (500_000, "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
-    "플레이어 확률 증가": (400_000, "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션 효과, 1회용)"),
-    "뱅커 확률 증가": (400_000, "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션 효과, 1회용)")
+    "플레이어 확률 증가": (400_000, "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
+    "뱅커 확률 증가": (400_000, "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션용)")
 }
 
 for name, (price, desc) in item_shop.items():
