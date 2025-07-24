@@ -93,7 +93,8 @@ st.session_state.bet_amount = st.slider("🎚️ 베팅 금액 설정 (₩10,000
                                         min_value=0,
                                         max_value=st.session_state.balance,
                                         step=BET_STEP,
-                                        value=st.session_state.bet_amount)
+                                        value=st.session_state.bet_amount,
+                                        key="slider")
 
 # 버튼 조작
 col1, col2, col3, col4 = st.columns(4)
@@ -114,11 +115,11 @@ st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**"
 
 # 아이템 효과 시각화
 active_effects = []
-if st.session_state.effects["2배 수익"]:
+if st.session_state.effects.get("2배 수익"):
     active_effects.append("💰 2배 수익 (다음 승리 1회 한정)")
-if st.session_state.effects["승률 증가"]:
+if st.session_state.effects.get("승률 증가"):
     active_effects.append(f"🎯 {st.session_state.effects['승률 증가']} 승률 증가 (시뮬레이션)")
-if st.session_state.effects["타이 확률 증가"]:
+if st.session_state.effects.get("타이 확률 증가"):
     active_effects.append("🟢 타이 확률 증가 (시뮬레이션)")
 
 if active_effects:
@@ -136,9 +137,8 @@ if st.button("🎲 게임 시작"):
 
     player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
 
-    # 시뮬레이션 효과 반영 (간단한 확률 보정)
-    boost = st.session_state.effects["승률 증가"]
-    tie_boost = st.session_state.effects["타이 확률 증가"]
+    boost = st.session_state.effects.get("승률 증가")
+    tie_boost = st.session_state.effects.get("타이 확률 증가")
     if tie_boost and random.random() < 0.1:
         winner = "타이"
     elif boost and random.random() < 0.2:
@@ -158,7 +158,7 @@ if st.button("🎲 게임 시작"):
         else:
             payout = bet_amount * 8
 
-        if st.session_state.effects["2배 수익"]:
+        if st.session_state.effects.get("2배 수익"):
             payout *= 2
             st.session_state.effects["2배 수익"] = False
 
