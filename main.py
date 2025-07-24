@@ -31,6 +31,8 @@ if "balance" not in st.session_state:
     st.session_state.balance = STARTING_BALANCE
 if "bet_amount" not in st.session_state:
     st.session_state.bet_amount = 0
+if "bet_input" not in st.session_state:
+    st.session_state.bet_input = 0
 if "history" not in st.session_state:
     st.session_state.history = []
 if "banned" not in st.session_state:
@@ -79,25 +81,32 @@ st.markdown("#### 🎚️ 베팅 금액 조절")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("➖ -10,000원"):
-        st.session_state.bet_amount = max(st.session_state.bet_amount - BET_STEP, 0)
+        new_value = max(st.session_state.bet_amount - BET_STEP, 0)
+        st.session_state.bet_amount = new_value
+        st.session_state.bet_input = new_value
 with col2:
     if st.button("➕ +10,000원"):
-        st.session_state.bet_amount = min(st.session_state.bet_amount + BET_STEP, st.session_state.balance)
+        new_value = min(st.session_state.bet_amount + BET_STEP, st.session_state.balance)
+        st.session_state.bet_amount = new_value
+        st.session_state.bet_input = new_value
 with col3:
     if st.button("💯 전액 베팅"):
         st.session_state.bet_amount = st.session_state.balance
+        st.session_state.bet_input = st.session_state.balance
 with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
+        st.session_state.bet_input = 0
 
-# 슬라이더
-st.session_state.bet_amount = st.slider(
-    "🎚️ 슬라이더로 베팅 금액 설정",
+# 숫자 입력으로 베팅 금액 설정
+st.session_state.bet_amount = st.number_input(
+    "💵 베팅 금액 입력 (10,000원 단위)",
     min_value=0,
     max_value=st.session_state.balance,
     step=BET_STEP,
-    value=st.session_state.bet_amount,
-    key="bet_slider"
+    value=st.session_state.bet_input,
+    key="bet_input",
+    format="%d"
 )
 
 st.markdown(f"**📌 현재 베팅 금액: {st.session_state.bet_amount:,}원**")
@@ -108,6 +117,10 @@ if st.button("🎲 게임 시작"):
 
     if bet_amount == 0:
         st.warning("⚠️ 베팅 금액이 0원입니다.")
+        st.stop()
+
+    if bet_amount > st.session_state.balance:
+        st.error("❌ 베팅 금액이 잔액을 초과했습니다. 다시 설정해 주세요.")
         st.stop()
 
     player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
