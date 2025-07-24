@@ -38,7 +38,7 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 if "upgrades" not in st.session_state:
-    st.session_state.upgrades = {"타이 확정": 0}
+    st.session_state.upgrades = {"타이 확정": 0}  # 구매 횟수 기록
 if "effects" not in st.session_state:
     st.session_state.effects = {
         "타이 확정": False,
@@ -46,6 +46,7 @@ if "effects" not in st.session_state:
         "승률 증가": None
     }
 
+# ❌ 다시 시작 클릭 시 경고 화면
 if st.session_state.try_restart:
     st.markdown("""
         <div style='text-align: center; padding-top: 100px;'>
@@ -56,9 +57,11 @@ if st.session_state.try_restart:
         """, unsafe_allow_html=True)
     st.stop()
 
+# 타이틀
 st.title("🛑 도박 예방 프로그램")
 st.caption("이 시뮬레이션은 도박의 위험성을 체감하고, 그 결과가 얼마나 불확실한지를 보여주기 위한 교육용 도구입니다.")
 
+# 💀 파산 시 경고 출력
 if st.session_state.balance <= 0 or st.session_state.banned:
     st.error("💥 잔액이 0원이 되었습니다.")
     st.markdown("""
@@ -75,37 +78,32 @@ if st.session_state.balance <= 0 or st.session_state.banned:
     st.session_state.banned = True
     st.stop()
 
+# 잔액 및 베팅
 st.markdown(f"### 💰 현재 잔액: **{st.session_state.balance:,}원**")
 
 bet_type = st.radio("베팅할 대상", ["플레이어", "뱅커", "타이"])
 
-# 베팅 금액 슬라이더와 입력 동기화
-col1, col2 = st.columns(2)
-with col1:
-    slider = st.slider("💵 베팅 금액 (10,000원 단위)", 0, st.session_state.balance, st.session_state.bet_amount, step=BET_STEP, key="slider")
-with col2:
-    number = st.number_input("또는 직접 입력", min_value=0, max_value=st.session_state.balance, step=BET_STEP, value=st.session_state.bet_amount, key="number")
-
-# 입력 동기화
-if number != st.session_state.bet_amount:
-    st.session_state.bet_amount = number
-    st.session_state.slider = number
-elif slider != st.session_state.bet_amount:
-    st.session_state.bet_amount = slider
-    st.session_state.number = slider
+# 슬라이더
+slider_value = st.slider("🎚️ 베팅 금액 설정",
+                         min_value=0,
+                         max_value=st.session_state.balance,
+                         step=BET_STEP,
+                         value=st.session_state.bet_amount,
+                         key="bet_slider")
+st.session_state.bet_amount = slider_value
 
 # 버튼 조작
-c1, c2, c3, c4 = st.columns(4)
-with c1:
+col1, col2, col3, col4 = st.columns(4)
+with col1:
     if st.button("➖ -10,000원"):
         st.session_state.bet_amount = max(st.session_state.bet_amount - BET_STEP, 0)
-with c2:
+with col2:
     if st.button("➕ +10,000원"):
         st.session_state.bet_amount = min(st.session_state.bet_amount + BET_STEP, st.session_state.balance)
-with c3:
+with col3:
     if st.button("💯 전액 베팅"):
         st.session_state.bet_amount = st.session_state.balance
-with c4:
+with col4:
     if st.button("🔁 초기화"):
         st.session_state.bet_amount = 0
 
@@ -176,10 +174,10 @@ tie_count = st.session_state.upgrades.get("타이 확정", 0)
 tie_price = 1_000_000 * (2 ** tie_count)
 
 item_shop = {
-    "타이 확정": (tie_price, "💥 다음 게임에서 무조건 타이 결과가 나옵니다. (1회용, 가격 2배씩 증가)"),
+    "타이 확정": (tie_price, "💥 다음 게임에서 무조건 타이 결과가 나옵니다. (1회용, 가격은 매 구매 시 2배씩 상승)"),
     "2배 수익": (500_000, "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
-    "플레이어 확률 증가": (400_000, "🎯 플레이어 승 확률 소폭 증가. (시뮬레이션 효과, 1회용)"),
-    "뱅커 확률 증가": (400_000, "🎯 뱅커 승 확률 소폭 증가. (시뮬레이션 효과, 1회용)")
+    "플레이어 확률 증가": (400_000, "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션 효과, 1회용)"),
+    "뱅커 확률 증가": (400_000, "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션 효과, 1회용)")
 }
 
 for name, (price, desc) in item_shop.items():
@@ -200,6 +198,7 @@ for name, (price, desc) in item_shop.items():
             st.warning("잔액이 부족합니다.")
         st.caption(desc)
 
+# 교육 메시지
 st.markdown("---")
 st.markdown("""
 #### 🎓 교육 메시지
