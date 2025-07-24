@@ -38,7 +38,7 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 if "upgrades" not in st.session_state:
-    st.session_state.upgrades = {}
+    st.session_state.upgrades = {"타이 확정": 0}  # 구매 횟수 기록
 if "effects" not in st.session_state:
     st.session_state.effects = {
         "타이 확정": False,
@@ -88,16 +88,23 @@ bet_input = st.number_input("💵 베팅 금액 입력 (10,000원 단위)",
                             min_value=0,
                             max_value=st.session_state.balance,
                             step=BET_STEP,
-                            format="%d")
+                            value=st.session_state.bet_amount,
+                            format="%d",
+                            key="bet_input")
 st.session_state.bet_amount = bet_input
 
 # 슬라이더
-slider_value = st.slider("🎚️ 베팅 금액 슬라이더", 0, st.session_state.balance, bet_input, BET_STEP)
-if slider_value != bet_input:
+slider_value = st.slider("🎚️ 베팅 금액 슬라이더",
+                          min_value=0,
+                          max_value=st.session_state.balance,
+                          step=BET_STEP,
+                          value=st.session_state.bet_amount,
+                          key="bet_slider")
+if slider_value != st.session_state.bet_amount:
     st.session_state.bet_amount = slider_value
-    bet_input = slider_value
+    st.session_state.bet_input = slider_value
 
-# 버튼들
+# 버튼 조작
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("➖ -10,000원"):
@@ -174,18 +181,25 @@ if st.button("🎲 게임 시작"):
 # 아이템 상점
 st.markdown("---")
 st.header("🧨 아이템 상점")
+
+# 타이 확정 가격은 구매할 때마다 2배씩 증가
+tie_count = st.session_state.upgrades.get("타이 확정", 0)
+tie_price = 1_000_000 * (2 ** tie_count)
+
 item_shop = {
-    "타이 확정": (800_000, "다음 게임에서 무조건 타이 결과가 나옵니다."),
-    "2배 수익": (500_000, "다음 승리 시 수익이 2배로 들어옵니다."),
-    "플레이어 확률 증가": (400_000, "플레이어가 이길 확률이 소폭 증가합니다 (시뮬레이션용)."),
-    "뱅커 확률 증가": (400_000, "뱅커가 이길 확률이 소폭 증가합니다 (시뮬레이션용).")
+    "타이 확정": (tie_price, "💥 다음 게임에서 무조건 타이 결과가 나옵니다. (1회용, 가격은 매 구매 시 2배씩 상승)"),
+    "2배 수익": (500_000, "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
+    "플레이어 확률 증가": (400_000, "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션 효과, 1회용)"),
+    "뱅커 확률 증가": (400_000, "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션 효과, 1회용)")
 }
+
 for name, (price, desc) in item_shop.items():
     if st.button(f"💠 {name} 구매 ({price:,}원)"):
         if st.session_state.balance >= price:
             st.session_state.balance -= price
             if name == "타이 확정":
                 st.session_state.effects["타이 확정"] = True
+                st.session_state.upgrades["타이 확정"] += 1
             elif name == "2배 수익":
                 st.session_state.effects["2배 수익"] = True
             elif name == "플레이어 확률 증가":
