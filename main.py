@@ -38,9 +38,12 @@ if "banned" not in st.session_state:
 if "try_restart" not in st.session_state:
     st.session_state.try_restart = False
 if "upgrades" not in st.session_state:
-    st.session_state.upgrades = {
-        "타이 배당 향상": False,
-        "패배 손실 보호막": False
+    st.session_state.upgrades = {}
+if "effects" not in st.session_state:
+    st.session_state.effects = {
+        "타이 확정": False,
+        "2배 수익": False,
+        "승률 증가": None
     }
 
 # ❌ 다시 시작 클릭 시 경고 화면
@@ -88,13 +91,13 @@ bet_input = st.number_input("💵 베팅 금액 입력 (10,000원 단위)",
                             format="%d")
 st.session_state.bet_amount = bet_input
 
-# 슬라이더로도 조절 가능
+# 슬라이더
 slider_value = st.slider("🎚️ 베팅 금액 슬라이더", 0, st.session_state.balance, bet_input, BET_STEP)
 if slider_value != bet_input:
     st.session_state.bet_amount = slider_value
     bet_input = slider_value
 
-# 버튼들로 조절
+# 버튼들
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("➖ -10,000원"):
@@ -119,7 +122,15 @@ if st.button("🎲 게임 시작"):
         st.warning("⚠️ 베팅 금액이 0원입니다.")
         st.stop()
 
-    player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
+    if st.session_state.effects["타이 확정"]:
+        winner = "타이"
+        st.session_state.effects["타이 확정"] = False
+        player_hand = ["?", "?"]
+        banker_hand = ["?", "?"]
+        player_score = 0
+        banker_score = 0
+    else:
+        player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
 
     st.markdown("### 🎯 게임 결과")
     st.write(f"🧑 플레이어: `{player_hand}` → {player_score}점")
@@ -133,14 +144,17 @@ if st.button("🎲 게임 시작"):
         elif winner == "뱅커":
             payout = int(bet_amount * 0.95)
         else:
-            multiplier = 10 if st.session_state.upgrades["타이 배당 향상"] else 8
-            payout = bet_amount * multiplier
+            payout = bet_amount * 8
+
+        if st.session_state.effects["2배 수익"]:
+            payout *= 2
+            st.session_state.effects["2배 수익"] = False
+
         st.session_state.balance += payout
         st.success(f"🎉 승리! +{payout:,}원 수익")
     else:
-        loss = bet_amount if not st.session_state.upgrades["패배 손실 보호막"] else int(bet_amount * 0.7)
-        st.session_state.balance -= loss
-        st.error(f"😞 패배! -{loss:,}원 손실")
+        st.session_state.balance -= bet_amount
+        st.error(f"😞 패배! -{bet_amount:,}원 손실")
 
     st.markdown(f"### 💰 남은 잔액: **{st.session_state.balance:,}원**")
 
@@ -157,24 +171,30 @@ if st.button("🎲 게임 시작"):
         "잔액": st.session_state.balance
     })
 
-# 업그레이드 샵
+# 아이템 상점
 st.markdown("---")
-st.header("🔧 업그레이드 샵")
-upgrade_items = {
-    "타이 배당 향상": (500_000, "타이에 베팅 성공 시 배당을 8배 → 10배로 향상합니다."),
-    "패배 손실 보호막": (300_000, "패배 시 손실을 30% 줄입니다."),
+st.header("🧨 아이템 상점")
+item_shop = {
+    "타이 확정": (800_000, "다음 게임에서 무조건 타이 결과가 나옵니다."),
+    "2배 수익": (500_000, "다음 승리 시 수익이 2배로 들어옵니다."),
+    "플레이어 확률 증가": (400_000, "플레이어가 이길 확률이 소폭 증가합니다 (시뮬레이션용)."),
+    "뱅커 확률 증가": (400_000, "뱅커가 이길 확률이 소폭 증가합니다 (시뮬레이션용).")
 }
-for name, (cost, desc) in upgrade_items.items():
-    if st.session_state.upgrades[name]:
-        st.success(f"✅ {name} (보유 중)")
-    else:
-        if st.button(f"🛍 {name} 구매 ({cost:,}원)"):
-            if st.session_state.balance >= cost:
-                st.session_state.balance -= cost
-                st.session_state.upgrades[name] = True
-                st.success(f"'{name}' 업그레이드 완료!")
-            else:
-                st.warning("잔액이 부족합니다.")
+for name, (price, desc) in item_shop.items():
+    if st.button(f"💠 {name} 구매 ({price:,}원)"):
+        if st.session_state.balance >= price:
+            st.session_state.balance -= price
+            if name == "타이 확정":
+                st.session_state.effects["타이 확정"] = True
+            elif name == "2배 수익":
+                st.session_state.effects["2배 수익"] = True
+            elif name == "플레이어 확률 증가":
+                st.session_state.effects["승률 증가"] = "플레이어"
+            elif name == "뱅커 확률 증가":
+                st.session_state.effects["승률 증가"] = "뱅커"
+            st.success(f"'{name}' 아이템 구매 완료!")
+        else:
+            st.warning("잔액이 부족합니다.")
         st.caption(desc)
 
 # 교육 메시지
