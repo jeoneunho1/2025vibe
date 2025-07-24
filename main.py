@@ -93,8 +93,7 @@ st.session_state.bet_amount = st.slider("🎚️ 베팅 금액 설정 (₩10,000
                                         min_value=0,
                                         max_value=st.session_state.balance,
                                         step=BET_STEP,
-                                        value=st.session_state.bet_amount,
-                                        key="slider")
+                                        value=st.session_state.bet_amount)
 
 # 버튼 조작
 col1, col2, col3, col4 = st.columns(4)
@@ -199,10 +198,10 @@ st.markdown("---")
 st.header("🧨 아이템 상점")
 
 shop = {
-    "2배 수익": (500_000 * (2 ** st.session_state.upgrades["2배 수익"]), "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
-    "플레이어 확률 증가": (400_000 * (2 ** st.session_state.upgrades["플레이어 확률 증가"]), "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
-    "뱅커 확률 증가": (400_000 * (2 ** st.session_state.upgrades["뱅커 확률 증가"]), "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
-    "타이 확률 증가": (600_000 * (2 ** st.session_state.upgrades["타이 확률 증가"]), "🟢 타이 확률이 소폭 증가합니다. (시뮬레이션용)")
+    "2배 수익": (500_000 * (2 ** st.session_state.upgrades.get("2배 수익", 0)), "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
+    "플레이어 확률 증가": (400_000 * (2 ** st.session_state.upgrades.get("플레이어 확률 증가", 0)), "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
+    "뱅커 확률 증가": (400_000 * (2 ** st.session_state.upgrades.get("뱅커 확률 증가", 0)), "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
+    "타이 확률 증가": (600_000 * (2 ** st.session_state.upgrades.get("타이 확률 증가", 0)), "🟢 타이 확률이 소폭 증가합니다. (시뮬레이션용)")
 }
 
 for item, (price, desc) in shop.items():
@@ -217,7 +216,7 @@ for item, (price, desc) in shop.items():
                 st.session_state.effects["승률 증가"] = "뱅커"
             elif item == "타이 확률 증가":
                 st.session_state.effects["타이 확률 증가"] = True
-            st.session_state.upgrades[item] += 1
+            st.session_state.upgrades[item] = st.session_state.upgrades.get(item, 0) + 1
             st.success(f"'{item}' 아이템 구매 완료!")
         else:
             st.warning("잔액이 부족합니다.")
