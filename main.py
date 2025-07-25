@@ -16,8 +16,7 @@ def play_baccarat():
     banker_hand = [draw_card(), draw_card()]
     player_score = hand_score(player_hand)
     banker_score = hand_score(banker_hand)
-    winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
-    return player_hand, banker_hand, player_score, banker_score, winner
+    return player_hand, banker_hand, player_score, banker_score
 
 # 앱 설정
 st.set_page_config(page_title="도박 예방 프로그램", layout="centered")
@@ -117,7 +116,7 @@ active_effects = []
 if st.session_state.effects.get("2배 수익"):
     active_effects.append("💰 2배 수익 (다음 승리 1회 한정)")
 if st.session_state.effects.get("승률 증가"):
-    active_effects.append(f"🎯 {st.session_state.effects['승률 증가']} 승률 증가 (시뮬레이션)")
+    active_effects.append(f"🎯 {st.session_state.effects['승률 증가']} 승률 증가 (누적 구매 반영)")
 if st.session_state.effects.get("타이 확률 증가"):
     active_effects.append("🟢 타이 확률 증가 (시뮬레이션)")
 
@@ -134,14 +133,19 @@ if st.button("🎲 게임 시작"):
         st.warning("⚠️ 베팅 금액이 0원입니다.")
         st.stop()
 
-    player_hand, banker_hand, player_score, banker_score, winner = play_baccarat()
+    player_hand, banker_hand, player_score, banker_score = play_baccarat()
+    winner = "플레이어" if player_score > banker_score else "뱅커" if banker_score > player_score else "타이"
 
+    # 실제 점수 기반 + 강화된 승률 반영
     boost = st.session_state.effects.get("승률 증가")
-    tie_boost = st.session_state.effects.get("타이 확률 증가")
-    if tie_boost and random.random() < 0.1:
-        winner = "타이"
-    elif boost and random.random() < 0.2:
+    boost_rate = 0.1 * st.session_state.upgrades.get(f"{boost} 확률 증가", 0) if boost else 0
+    if boost and winner != boost and random.random() < boost_rate:
         winner = boost
+
+    tie_boost = st.session_state.effects.get("타이 확률 증가")
+    tie_boost_rate = 0.05 * st.session_state.upgrades.get("타이 확률 증가", 0)
+    if winner != "타이" and tie_boost and random.random() < tie_boost_rate:
+        winner = "타이"
 
     st.markdown("### 🎯 게임 결과")
     st.write(f"🧑 플레이어: `{player_hand}` → {player_score}점")
@@ -199,9 +203,9 @@ st.header("🧨 아이템 상점")
 
 shop = {
     "2배 수익": (500_000 * (2 ** st.session_state.upgrades.get("2배 수익", 0)), "💰 다음 승리 시 수익이 2배로 들어옵니다. (1회용)"),
-    "플레이어 확률 증가": (400_000 * (2 ** st.session_state.upgrades.get("플레이어 확률 증가", 0)), "🎯 플레이어가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
-    "뱅커 확률 증가": (400_000 * (2 ** st.session_state.upgrades.get("뱅커 확률 증가", 0)), "🎯 뱅커가 이길 확률이 소폭 증가합니다. (시뮬레이션용)"),
-    "타이 확률 증가": (600_000 * (2 ** st.session_state.upgrades.get("타이 확률 증가", 0)), "🟢 타이 확률이 소폭 증가합니다. (시뮬레이션용)")
+    "플레이어 확률 증가": (400_000 * (2 ** st.session_state.upgrades.get("플레이어 확률 증가", 0)), "🎯 플레이어가 이길 확률이 구매당 +10%씩 증가합니다."),
+    "뱅커 확률 증가": (400_000 * (2 ** st.session_state.upgrades.get("뱅커 확률 증가", 0)), "🎯 뱅커가 이길 확률이 구매당 +10%씩 증가합니다."),
+    "타이 확률 증가": (600_000 * (2 ** st.session_state.upgrades.get("타이 확률 증가", 0)), "🟢 타이 확률이 구매당 +5%씩 증가합니다.")
 }
 
 for item, (price, desc) in shop.items():
